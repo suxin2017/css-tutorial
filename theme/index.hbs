@@ -54,21 +54,7 @@
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
         {{/if}}
 
-		<script src="https://giscus.app/client.js"
-			data-repo="suxin2017/css-tutorial"
-			data-repo-id="R_kgDOIVQtVg"
-			data-category="General"
-			data-category-id="DIC_kwDOIVQtVs4CSQwY"
-			data-mapping="pathname"
-			data-strict="0"
-			data-reactions-enabled="1"
-			data-emit-metadata="0"
-			data-input-position="bottom"
-			data-theme="preferred_color_scheme"
-			data-lang="zh-CN"
-			crossorigin="anonymous"
-			async>
-		</script>
+		
     </head>
     <body>
         <!-- Provide site root to javascript -->
@@ -198,7 +184,23 @@
                 <div id="content" class="content">
                     <main>
                         {{{ content }}}
-						<iframe class="giscus-frame"></iframe>
+						<div id="giscus-container">
+							<script src="https://giscus.app/client.js"
+								data-repo="suxin2017/css-tutorial"
+								data-repo-id="R_kgDOIVQtVg"
+								data-category="General"
+								data-category-id="DIC_kwDOIVQtVs4CSQwY"
+								data-mapping="pathname"
+								data-strict="0"
+								data-reactions-enabled="1"
+								data-emit-metadata="0"
+								data-input-position="bottom"
+								data-theme="preferred_color_scheme"
+								data-lang="zh-CN"
+								crossorigin="anonymous"
+								async>
+							</script>
+						</div>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
