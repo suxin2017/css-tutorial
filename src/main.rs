@@ -1,3 +1,5 @@
+use std::{fmt::Debug, str::Chars};
+
 pub struct List {
     head: Link,
 }
@@ -11,7 +13,6 @@ struct Node {
     elem: i32,
     next: Link,
 }
-
 
 impl List {
     pub fn new() -> Self {
@@ -27,6 +28,5 @@ impl List {
     }
 }
 
-fn main() {
-    println!("debug")
-}
+fn main() {}
+

@@ -9,12 +9,14 @@ pub enum ErrorKind {
 }
 pub(crate) type LexResult<T> = Result<T, ErrorKind>;
 
+// ANCHOR: lexer
 pub struct Lexer<'a> {
     range: Range,
     source_code: &'a str,
     source_code_length: usize,
     chars: std::str::CharIndices<'a>,
 }
+// ANCHOR_END: lexer
 
 impl<'a> Lexer<'a> {
     pub fn new(source_code: &'a str) -> Self {
@@ -24,18 +26,6 @@ impl<'a> Lexer<'a> {
             source_code_length: source_code.len(),
             source_code,
         }
-    }
-
-    pub fn cur_char(&mut self) -> Option<char> {
-        let cur_index = self.range.index();
-        if cur_index < self.source_code_length {
-            if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
-                // !("{:#?}{cur_index}", cur_char);
-                dbg!(cur_char);
-                return Some(cur_char);
-            }
-        }
-        None
     }
 
     pub fn peek(&mut self) -> Option<char> {
@@ -181,7 +171,19 @@ impl<'a> Lexer<'a> {
         Err(ErrorKind::DigitError(self.range))
     }
 
-    pub fn next_token(&mut self) -> LexResult<Token> {
+    pub fn cur_char(&mut self) -> Option<char> {
+        let cur_index = self.range.index();
+        if cur_index < self.source_code_length {
+            if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
+                // !("{:#?}{cur_index}", cur_char);
+                dbg!(cur_char);
+                return Some(cur_char);
+            }
+        }
+        None
+    }
+    //ANCHOR:get_token
+    pub fn get_token(&mut self) -> LexResult<Token> {
         while let Some(ch) = self.cur_char() {
             if ch.is_whitespace() {
                 self.advance();
@@ -190,6 +192,7 @@ impl<'a> Lexer<'a> {
             match ch {
                 '#' | '(' | ')' | ',' | '.' | ':' | ';' | '<' | '@' | '[' | '\\' | ']' | '{'
                 | '}' => {
+                    // 匹配特殊的的符号
                     let token = match ch {
                         '#' => Some(Token::NumberSign(self.range)),
                         '(' => Some(Token::LeftParen(self.range)),
@@ -207,12 +210,16 @@ impl<'a> Lexer<'a> {
                         '}' => Some(Token::RightCurlyBracket(self.range)),
                         _ => None,
                     };
+
                     if token.is_some() {
                         self.advance();
                         return Ok(token.unwrap());
                     }
                 }
+                // 获取数字
                 '+' | '-' => return self.try_digit(),
+
+                // 获取字符串
                 '\'' | '"' => return self.string_token(),
 
                 ch if ch.is_ascii_digit() => return self.try_digit(),
@@ -222,6 +229,7 @@ impl<'a> Lexer<'a> {
 
         return Ok(Token::EOF);
     }
+    //ANCHOR_END: get_token
 
     fn escape(&mut self) -> Option<(char, bool)> {
         if let Some(ch) = self.cur_char() {
@@ -292,7 +300,7 @@ mod tests {
     fn test_symbol_token() {
         let mut lexer = Lexer::new(r#""\'()+,-.:;<@[\]{}""#);
         loop {
-            match lexer.next_token() {
+            match lexer.get_token() {
                 token => {
                     if let Ok(token) = token {
                         println!("{:#?}", token);
@@ -314,7 +322,7 @@ mod tests {
     #[test]
     fn test_digit_token() {
         let mut lexer = Lexer::new(r#"1.1e"#);
-        match lexer.next_token() {
+        match lexer.get_token() {
             Ok(token) => {
                 println!("{}", token.str());
             }
@@ -348,10 +356,11 @@ mod tests {
 
     #[test]
     fn test_string() {
-        let mut lexer = Lexer::new(r#""abc
-        ""#);
-        match lexer.next_token() {
-            
+        let mut lexer = Lexer::new(
+            r#""abc
+        ""#,
+        );
+        match lexer.get_token() {
             Ok(token) => {
                 println!("{}", token.str());
             }
