@@ -1,23 +1,26 @@
-use crate::token::Token;
+use crate::{range::Range, token::Token};
 
 #[derive(Debug)]
 pub enum ErrorKind {
     EscapeError(Range),
     DigitError(Range),
+    IdentTokenError(Range),
+    StringTokenError(Range),
 }
-
 pub(crate) type LexResult<T> = Result<T, ErrorKind>;
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     range: Range,
-    source_code: String,
+    source_code: &'a str,
     source_code_length: usize,
+    chars: std::str::CharIndices<'a>,
 }
 
-impl Lexer {
-    pub fn new(source_code: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(source_code: &'a str) -> Self {
         Self {
             range: Range::default(),
+            chars: source_code.char_indices(),
             source_code_length: source_code.len(),
             source_code,
         }
@@ -26,21 +29,34 @@ impl Lexer {
     pub fn cur_char(&mut self) -> Option<char> {
         let cur_index = self.range.index();
         if cur_index < self.source_code_length {
-            let cur_char = self.source_code.chars().nth(cur_index);
-            println!("{:#?}{cur_index}", cur_char);
-            return cur_char;
+            if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
+                // !("{:#?}{cur_index}", cur_char);
+                dbg!(cur_char);
+                return Some(cur_char);
+            }
         }
         None
+    }
+
+    pub fn peek(&mut self) -> Option<char> {
+        let cur_index = self.range.index();
+        self.chars.clone().nth(cur_index + 1).map(|x| x.1)
     }
 
     pub fn advance(&mut self) {
         let cur_index = self.range.index();
         if cur_index < self.source_code_length {
-            let cur_char = self.source_code.chars().nth(cur_index);
+            let cur_char = self.chars.nth(cur_index).map(|c| c.1);
             self.range.advance_start();
             if let Some(cur_char) = cur_char {
-                if cur_char == '\n' {
-                    self.range.advance_start_line();
+                match cur_char {
+                    '\n' => {
+                        self.range.advance_start_line();
+                    }
+                    '\r' => {
+                        self.range.advance_start_line();
+                    }
+                    _ => {}
                 }
             }
         }
@@ -50,12 +66,36 @@ impl Lexer {
         todo!()
     }
     pub fn string_token(&mut self) -> LexResult<Token> {
-        // open sign
-        // if !self.pause_start_advance {
-        //     self.pause_start_advance = true;
-        // } else {
-        // }
-        todo!()
+        let mut result = String::new();
+
+        if let Some(ch) = self.cur_char() {
+            let mut f = |ch: char| -> bool {
+                if let Some((escape_ch, is_escape)) = self.escape() {
+                    result.push(escape_ch);
+                    if escape_ch == ch && is_escape {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
+                return false;
+            };
+            match ch {
+                '\'' => loop {
+                    if f('\'') {
+                        break;
+                    }
+                },
+                '"' => loop {
+                    if f('"') {
+                        break;
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        Ok(Token::Str(result, self.range))
     }
     pub fn try_digit(&mut self) -> LexResult<Token> {
         let mut result = String::new();
@@ -148,93 +188,132 @@ impl Lexer {
                 continue;
             }
             match ch {
-                // '\'' | '"' => return self.string_token(),
-                '#' => return Ok(Token::NumberSign(self.range)),
-                '(' => return Ok(Token::LeftParen(self.range)),
-                ')' => return Ok(Token::RightParen(self.range)),
+                '#' | '(' | ')' | ',' | '.' | ':' | ';' | '<' | '@' | '[' | '\\' | ']' | '{'
+                | '}' => {
+                    let token = match ch {
+                        '#' => Some(Token::NumberSign(self.range)),
+                        '(' => Some(Token::LeftParen(self.range)),
+                        ')' => Some(Token::RightParen(self.range)),
+                        ',' => Some(Token::Comma(self.range)),
+                        '.' => Some(Token::Dot(self.range)),
+                        ':' => Some(Token::Colon(self.range)),
+                        ';' => Some(Token::Semi(self.range)),
+                        '<' => Some(Token::LessThan(self.range)),
+                        '@' => Some(Token::At(self.range)),
+                        '[' => Some(Token::LeftSquareBracket(self.range)),
+                        '\\' => Some(Token::ReverseSolidus(self.range)),
+                        ']' => Some(Token::RightCurlyBracket(self.range)),
+                        '{' => Some(Token::LeftCurlyBracket(self.range)),
+                        '}' => Some(Token::RightCurlyBracket(self.range)),
+                        _ => None,
+                    };
+                    if token.is_some() {
+                        self.advance();
+                        return Ok(token.unwrap());
+                    }
+                }
                 '+' | '-' => return self.try_digit(),
-                ch if ch.is_ascii_digit() => return self.try_digit(),
-                ',' => return Ok(Token::Comma(self.range)),
-                '.' => return Ok(Token::Dot(self.range)),
-                ':' => return Ok(Token::Colon(self.range)),
-                ';' => return Ok(Token::Semi(self.range)),
-                '<' => return Ok(Token::LessThan(self.range)),
-                '@' => return Ok(Token::At(self.range)),
-                '[' => return Ok(Token::LeftSquareBracket(self.range)),
-                '\\' => return Ok(Token::ReverseSolidus(self.range)),
-                ']' => return Ok(Token::RightCurlyBracket(self.range)),
-                '{' => return Ok(Token::LeftCurlyBracket(self.range)),
-                '}' => return Ok(Token::RightCurlyBracket(self.range)),
+                '\'' | '"' => return self.string_token(),
 
-                _ => (),
+                ch if ch.is_ascii_digit() => return self.try_digit(),
+                _ => return self.ident_token(),
             }
-            self.advance();
         }
 
         return Ok(Token::EOF);
     }
-}
 
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Range {
-    start_pos_index: usize,
-    end_pos_index: usize,
-    start_index: usize,
-    start_line: usize,
-    end_index: usize,
-    end_line: usize,
-}
+    fn escape(&mut self) -> Option<(char, bool)> {
+        if let Some(ch) = self.cur_char() {
+            if ch == '\\' {
+                let mut result = String::new();
+                self.advance();
+                if let Some(ch) = self.cur_char() {
+                    match ch {
+                        '\n' | '\r' | 'a'..='f' | 'A'..='F' | '0'..='9' => {}
+                        ch => {
+                            self.advance();
+                            return Some((ch, true));
+                        }
+                    }
+                }
 
-impl Range {
-    pub fn index(&self) -> usize {
-        if self.end_pos_index > self.start_pos_index {
-            return self.end_pos_index;
+                loop {
+                    if let Some(ch) = self.cur_char() {
+                        match ch {
+                            'a'..='f' | 'A'..='F' | '0'..='9' => {
+                                result.push(ch);
+                                self.advance();
+                            }
+                            _ => break,
+                        }
+                    }
+                }
+                if let Some(ch) = self.cur_char() {
+                    if ch.is_whitespace() {
+                        self.advance();
+                    }
+                }
+                return Some((
+                    char::from_u32(u32::from_str_radix(result.as_str(), 16).unwrap()).unwrap(),
+                    true,
+                ));
+            } else {
+                self.advance();
+                return Some((ch, false));
+            }
         }
-        self.start_pos_index
+        None
     }
 
-    pub fn advance_start(&mut self) -> usize {
-        self.start_pos_index += 1;
-        self.start_index += 1;
-        self.start_pos_index
-    }
+    fn ident_token(&mut self) -> Result<Token, ErrorKind> {
+        let mut result = String::new();
 
-    pub fn advance_start_line(&mut self) {
-        self.start_line += 1;
-        self.start_index = 0;
-    }
+        while let Some(ch) = self.cur_char() {
+            if ch.is_whitespace() {
+                return Ok(Token::IdentToken(result, self.range));
+            } else {
+                result.push(ch);
+                self.advance();
+            }
+        }
 
-    pub fn advance_end(&mut self) -> usize {
-        self.end_pos_index += 1;
-        self.end_index += 1;
-        self.end_pos_index
-    }
-    pub fn advance_end_line(&mut self) {
-        self.end_line += 1;
-        self.end_index = 0;
+        Err(ErrorKind::IdentTokenError(self.range))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::token;
+
     use super::*;
 
     #[test]
     fn test_symbol_token() {
-        let mut lexer = Lexer::new(r#""\'()+,-.:;<@[\]{}"#.to_string());
-        while let Ok(token) = lexer.next_token() {
-            println!("{:#?}", token);
+        let mut lexer = Lexer::new(r#""\'()+,-.:;<@[\]{}""#);
+        loop {
+            match lexer.next_token() {
+                token => {
+                    if let Ok(token) = token {
+                        println!("{:#?}", token);
 
-            if Token::EOF == token {
-                break;
+                        if Token::EOF == token {
+                            break;
+                        }
+                    } else {
+                        println!("{:#?}", token);
+                        break;
+                    }
+                }
             }
         }
+
         assert!(true)
     }
 
     #[test]
     fn test_digit_token() {
-        let mut lexer = Lexer::new(r#"123 4"#.to_string());
+        let mut lexer = Lexer::new(r#"1.1e"#);
         match lexer.next_token() {
             Ok(token) => {
                 println!("{}", token.str());
@@ -244,5 +323,41 @@ mod tests {
             }
         }
         assert!(true)
+    }
+
+    #[test]
+    fn test_peek() {
+        let mut lexer = Lexer::new(r#"1.1e"#);
+        let mut c = "123456".char_indices();
+        println!("{}", c.clone().nth(0).unwrap().1);
+        println!("{}", c.clone().nth(0).unwrap().1);
+        println!("{}", c.clone().nth(0).unwrap().1);
+        println!("{}", c.clone().nth(0).unwrap().1);
+        println!("{}", c.nth(0).unwrap().1);
+        println!("{}", c.nth(0).unwrap().1);
+        println!("{}", c.nth(0).unwrap().1);
+        println!("{}", c.nth(0).unwrap().1);
+        // assert_eq!(Some('.'), lexer.peek());
+        // lexer.advance();
+        // assert_eq!(Some('1'), lexer.peek());
+        // lexer.advance();
+        // assert_eq!(Some('.'), lexer.peek());
+        // lexer.advance();
+        // assert_eq!(Some('.'), lexer.peek());
+    }
+
+    #[test]
+    fn test_string() {
+        let mut lexer = Lexer::new(r#""abc
+        ""#);
+        match lexer.next_token() {
+            
+            Ok(token) => {
+                println!("{}", token.str());
+            }
+            Err(e) => {
+                println!("{:#?}", e);
+            }
+        }
     }
 }

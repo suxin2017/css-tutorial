@@ -1,4 +1,6 @@
-use crate::lexer::Range;
+use std::string;
+
+use crate::range::Range;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Token {
@@ -47,14 +49,16 @@ pub enum Token {
     KeyWord(String, Range),
     Str(String, Range),
     Digital(String, Range),
+    IdentToken(String, Range),
 }
 
 impl Token {
-    pub fn str(&self) -> String {
+    pub fn str(&self) -> &str {
         match self {
-            Token::At(_) => return '@'.to_string(),
-            Token::Digital(string, _) => return string.clone(),
-            _ => "".to_string(),
+            Token::At(_) => return "@",
+            Token::Digital(string, _) => return &string,
+            Token::Str(string,_) => return &string,
+            _ => "",
         }
     }
 }
