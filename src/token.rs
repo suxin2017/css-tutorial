@@ -14,9 +14,9 @@ pub enum Token {
     /** : */
     Colon(Range),
     /** ( */
-    LeftParen(Range),
+    LeftParenthesis(Range),
     /** ) */
-    RightParen(Range),
+    RightParenthesis(Range),
 
     /** + */
     Plus(Range),
@@ -50,6 +50,9 @@ pub enum Token {
     Str(String, Range),
     Digital(String, Range),
     IdentToken(String, Range),
+    Comment(String,Range),
+    FunctionToken(crate::token::Token,Range),
+    PercentageToken(crate::token::Token,Range)
 }
 
 impl Token {

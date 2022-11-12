@@ -1,4 +1,5 @@
 use crate::{range::Range, token::Token};
+use crate::token::Token::Comment;
 
 #[derive(Debug)]
 pub enum ErrorKind {
@@ -6,10 +7,12 @@ pub enum ErrorKind {
     DigitError(Range),
     IdentTokenError(Range),
     StringTokenError(Range),
+    CommentTokenError(Range)
 }
 pub(crate) type LexResult<T> = Result<T, ErrorKind>;
 
 // ANCHOR: lexer
+#[derive(Debug)]
 pub struct Lexer<'a> {
     range: Range,
     source_code: &'a str,
@@ -87,6 +90,33 @@ impl<'a> Lexer<'a> {
 
         Ok(Token::Str(result, self.range))
     }
+
+    fn try_comment(&mut self)->LexResult<Token>{
+        if let Some(ch) = self.cur_char(){
+            if ch == '/'{
+                if matches!(self.peek() ,Some('*')) {
+                    let mut result = String::from("/*");
+                    self.advance();
+                    self.advance();
+
+                    while let Some(ch) = self.cur_char() {
+                        if ch == '*' && matches!(self.peek(),Some('/')){
+                            result.push_str("*/");
+                            self.advance();
+                            self.advance();
+                            return Ok(Comment(result,self.range));
+                        }else{
+                            result.push(ch);
+                            self.advance()
+                        }
+
+                    }
+                }
+            }
+        }
+        Err(ErrorKind::CommentTokenError(self.range))
+    }
+
     pub fn try_digit(&mut self) -> LexResult<Token> {
         let mut result = String::new();
 
@@ -195,8 +225,8 @@ impl<'a> Lexer<'a> {
                     // 匹配特殊的的符号
                     let token = match ch {
                         '#' => Some(Token::NumberSign(self.range)),
-                        '(' => Some(Token::LeftParen(self.range)),
-                        ')' => Some(Token::RightParen(self.range)),
+                        '(' => Some(Token::LeftParenthesis(self.range)),
+                        ')' => Some(Token::RightParenthesis(self.range)),
                         ',' => Some(Token::Comma(self.range)),
                         '.' => Some(Token::Dot(self.range)),
                         ':' => Some(Token::Colon(self.range)),
@@ -216,20 +246,37 @@ impl<'a> Lexer<'a> {
                         return Ok(token.unwrap());
                     }
                 }
-                // 获取数字
-                '+' | '-' => return self.try_digit(),
+                '/' => return self.try_comment(),
+
 
                 // 获取字符串
                 '\'' | '"' => return self.string_token(),
 
-                ch if ch.is_ascii_digit() => return self.try_digit(),
-                _ => return self.ident_token(),
+                ch if ch.is_ascii_digit() || ch =='+' || ch=='-' => {
+                    let mut token =  self.try_digit()?;
+
+                    if matches!(self.peek(),Some('%')) {
+                        self.advance();
+                        token = Token::PercentageToken(token,self.range);
+                    }
+                    return Ok(token);
+                },
+                _ => {
+                    let mut token = self.ident_token()?;
+
+                    if matches!(self.peek(),Some('(')) {
+                        self.advance();
+                        token = Token::FunctionToken(token,self.range) ;
+                    };
+                    return Ok(token);
+                } ,
             }
         }
 
         return Ok(Token::EOF);
     }
     //ANCHOR_END: get_token
+
 
     fn escape(&mut self) -> Option<(char, bool)> {
         if let Some(ch) = self.cur_char() {
@@ -274,19 +321,43 @@ impl<'a> Lexer<'a> {
         None
     }
 
+
+
     fn ident_token(&mut self) -> Result<Token, ErrorKind> {
         let mut result = String::new();
 
         while let Some(ch) = self.cur_char() {
-            if ch.is_whitespace() {
-                return Ok(Token::IdentToken(result, self.range));
-            } else {
+            fn match_word( lexer:&mut Lexer,result:&mut String) {
+                while let Some((escape_ch, _)) = lexer.escape() {
+                    if matches!(escape_ch,'a'..='z'|'A'..='Z'|'_' | '\u{0080}'..) {
+                        result.push(escape_ch);
+                    }
+                }
+            }
+
+            if ch == '_' {
                 result.push(ch);
                 self.advance();
-            }
-        }
+                match_word(self,&mut result);
+            }else if ch == '-' && matches!(self.peek(),Some('-')){
+                result.push(ch);
+                result.push(ch);
+                self.advance();
+                self.advance();
+                match_word(self,&mut result);
+            }else{
+                match_word(self,&mut result);
+                if result.len() == 0 {
 
-        Err(ErrorKind::IdentTokenError(self.range))
+                    return Err(ErrorKind::IdentTokenError(self.range));
+                }
+            }
+
+
+            return Ok(Token::IdentToken(result, self.range));
+
+        }
+        return Ok(Token::IdentToken(result, self.range));
     }
 }
 
@@ -354,18 +425,20 @@ mod tests {
         // assert_eq!(Some('.'), lexer.peek());
     }
 
+
+
     #[test]
     fn test_string() {
         let mut lexer = Lexer::new(
-            r#""abc
-        ""#,
+            r#"abc
+       "#,
         );
         match lexer.get_token() {
             Ok(token) => {
-                println!("{}", token.str());
+                dbg!(token);
             }
             Err(e) => {
-                println!("{:#?}", e);
+                dbg!(e);
             }
         }
     }
