@@ -50,9 +50,14 @@ pub enum Token {
     Str(String, Range),
     Digital(String, Range),
     IdentToken(String, Range),
-    Comment(String,Range),
-    FunctionToken(crate::token::Token,Range),
-    PercentageToken(crate::token::Token,Range)
+    Comment(String, Range),
+    FunctionToken(String, Range),
+    PercentageToken(String, Range),
+    AtKeywordToken(String, Range),
+    HashToken(String, Range),
+    UrlToken(String, Range),
+    CDOToken(Range),
+    CDCToken(Range),
 }
 
 impl Token {
