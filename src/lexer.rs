@@ -1,13 +1,14 @@
+use crate::token::TokenType;
+use crate::token::TokenType::{Comment, HashToken, UrlToken};
 use crate::{range::Range, token::Token};
-use crate::token::Token::{Comment, HashToken, UrlToken};
 
 #[derive(Debug)]
 pub enum ErrorKind {
-    EscapeError(Range),
-    DigitError(Range),
-    IdentTokenError(Range),
-    StringTokenError(Range),
-    CommentTokenError(Range),
+    EscapeError,
+    DigitError,
+    IdentTokenError,
+    StringTokenError,
+    CommentTokenError,
 }
 
 pub(crate) type LexResult<T> = Result<T, ErrorKind>;
@@ -15,7 +16,9 @@ pub(crate) type LexResult<T> = Result<T, ErrorKind>;
 // ANCHOR: lexer
 #[derive(Debug)]
 pub struct Lexer<'a> {
-    range: Range,
+    pos_index: usize,
+    peek_token: Option<Token>,
+    cur_token: Option<Token>,
     source_code: &'a str,
     source_code_length: usize,
     chars: std::str::CharIndices<'a>,
@@ -25,39 +28,32 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new(source_code: &'a str) -> Self {
         Self {
-            range: Range::default(),
             chars: source_code.char_indices(),
+            pos_index: 0,
+            peek_token: None,
+            cur_token: None,
             source_code_length: source_code.len(),
             source_code,
         }
     }
 
-    pub fn peek(&mut self) -> Option<char> {
-        let cur_index = self.range.index();
+    pub fn peek_ch(&mut self) -> Option<char> {
+        let cur_index = self.pos_index;
+        dbg!(cur_index, self.chars.clone().nth(cur_index + 1).map(|x| x.1));
         self.chars.clone().nth(cur_index + 1).map(|x| x.1)
     }
 
     pub fn advance(&mut self) {
-        let cur_index = self.range.index();
+        let cur_index = self.pos_index;
         if cur_index < self.source_code_length {
-            let cur_char = self.chars.nth(cur_index).map(|c| c.1);
-            self.range.advance_start();
-            if let Some(cur_char) = cur_char {
-                match cur_char {
-                    '\n' => {
-                        self.range.advance_start_line();
-                    }
-                    '\r' => {
-                        self.range.advance_start_line();
-                    }
-                    _ => {}
-                }
-            }
+            self.pos_index += 1;
         }
     }
 
-    pub fn string_token(&mut self) -> LexResult<Token> {
+    pub fn string_token(&mut self) -> Token {
         let mut result = String::new();
+        let start_pos = self.pos_index;
+        let mut end_pos = self.pos_index;
 
         if let Some(ch) = self.cur_char() {
             let mut f = |ch: char| -> bool {
@@ -67,18 +63,20 @@ impl<'a> Lexer<'a> {
                         return true;
                     }
                 } else {
-                    return true;
+                    panic!("parse string token error");
                 }
                 return false;
             };
             match ch {
                 '\'' => loop {
                     if f('\'') {
+                        end_pos = self.pos_index;
                         break;
                     }
                 },
                 '"' => loop {
                     if f('"') {
+                        end_pos = self.pos_index;
                         break;
                     }
                 },
@@ -86,37 +84,37 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(Token::Str(result, self.range))
+        Token(TokenType::Str, Range::new(start_pos, end_pos))
     }
 
-    fn try_comment(&mut self) -> LexResult<Token> {
+    fn try_comment(&mut self) -> Token {
         if let Some(ch) = self.cur_char() {
             if ch == '/' {
-                if matches!(self.peek() ,Some('*')) {
-                    let mut result = String::from("/*");
+                let start_pos = self.pos_index;
+
+                if matches!(self.peek_ch(), Some('*')) {
                     self.advance();
                     self.advance();
 
                     while let Some(ch) = self.cur_char() {
-                        if ch == '*' && matches!(self.peek(),Some('/')) {
-                            result.push_str("*/");
+                        if ch == '*' && matches!(self.peek_ch(), Some('/')) {
                             self.advance();
                             self.advance();
-                            return Ok(Comment(result, self.range));
+                            let end_pos = self.pos_index;
+                            return Token(TokenType::Comment, Range::new(start_pos, end_pos));
                         } else {
-                            result.push(ch);
                             self.advance()
                         }
                     }
                 }
             }
         }
-        Err(ErrorKind::CommentTokenError(self.range))
+        panic!("parse comment error")
     }
 
-    pub fn try_digit(&mut self) -> LexResult<Token> {
+    pub fn try_digit(&mut self) -> Token {
         let mut result = String::new();
-
+        let start_pos = self.pos_index;
         if let Some(ch) = self.cur_char() {
             if matches!(ch, '+' | '-') {
                 result.push(ch);
@@ -151,9 +149,9 @@ impl<'a> Lexer<'a> {
                     }
                     _ => {
                         return if ch == '+' {
-                            Ok(Token::Plus(self.range))
+                            Token(TokenType::Plus, Range::new(start_pos, start_pos + 1))
                         } else {
-                            Ok(Token::Minus(self.range))
+                            Token(TokenType::Minus, Range::new(start_pos, start_pos + 1))
                         };
                     }
                 }
@@ -192,14 +190,15 @@ impl<'a> Lexer<'a> {
                     }
                 }
             }
-            return Ok(Token::Digital(result, self.range));
-        }
 
-        Err(ErrorKind::DigitError(self.range))
+            let end_pos = self.pos_index;
+            return Token(TokenType::Digital, Range::new(start_pos, end_pos));
+        }
+        panic!("parse digit error");
     }
 
     pub fn cur_char(&mut self) -> Option<char> {
-        let cur_index = self.range.index();
+        let cur_index = self.pos_index;
         if cur_index < self.source_code_length {
             if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
                 dbg!(cur_char);
@@ -220,143 +219,160 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+    pub fn get_peek_token(&mut self) -> Option<Token> {
+        if let None = self.peek_token {
+            self.peek_token = Some(self.get_token());
+        } else {
+            return self.peek_token;
+        }
+        return self.peek_token;
+    }
+
+    pub fn eat_token(&mut self) -> Token {
+        if let Some(peek_token) = self.peek_token {
+            self.peek_token = None;
+            return peek_token;
+        }
+        return self.get_token();
+    }
+
+    pub fn get_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
+        if let Some(token) = self.get_peek_token() {
+            return token.check_type(token_type);
+        }
+        false
+    }
     //ANCHOR:get_token
-    pub fn get_token(&mut self) -> LexResult<Token> {
+    pub fn get_token(&mut self) -> Token {
         while let Some(ch) = self.cur_char() {
             if ch.is_whitespace() {
                 self.advance();
                 continue;
             }
             match ch {
-                 '(' | ')' | ',' | '.' | ':' | ';' | '<' |  '[' | '\\' | ']' | '{'
-                | '}' => {
+                ch @ ('(' | ')' | ',' | '.' | ':' | ';' | '<' | '[' | '\\' | ']' | '{' | '}') => {
+                    let start_pos = self.pos_index;
                     // 匹配特殊的的符号
-                    let token = match ch {
-                        '(' => Some(Token::LeftParenthesis(self.range)),
-                        ')' => Some(Token::RightParenthesis(self.range)),
-                        ',' => Some(Token::Comma(self.range)),
-                        '.' => Some(Token::Dot(self.range)),
-                        ':' => Some(Token::Colon(self.range)),
-                        ';' => Some(Token::Semi(self.range)),
-                        '<' => {
-                            Some(Token::LessThan(self.range))
+                    let token_type = match ch {
+                        '(' => TokenType::LeftParenthesis,
+                        ')' => TokenType::RightParenthesis,
+                        ',' => TokenType::Comma,
+                        '.' => TokenType::Dot,
+                        ':' => TokenType::Colon,
+                        ';' => TokenType::Semi,
+                        '<' => TokenType::LessThan,
+                        '[' => TokenType::LeftSquareBracket,
+                        '\\' => TokenType::ReverseSolidus,
+                        ']' => TokenType::RightCurlyBracket,
+                        '{' => TokenType::LeftCurlyBracket,
+                        '}' => TokenType::RightCurlyBracket,
+                        _ => {
+                            panic!("不可能发生")
                         }
-                        '[' => Some(Token::LeftSquareBracket(self.range)),
-                        '\\' => Some(Token::ReverseSolidus(self.range)),
-                        ']' => Some(Token::RightCurlyBracket(self.range)),
-                        '{' => Some(Token::LeftCurlyBracket(self.range)),
-                        '}' => Some(Token::RightCurlyBracket(self.range)),
-                        _ => None,
                     };
 
-                    if token.is_some() {
-                        self.advance();
-                        return Ok(token.unwrap());
-                    }
+                    self.advance();
+
+                    let end_pos = self.pos_index;
+                    return Token(token_type, Range::new(start_pos, end_pos));
                 }
                 '/' => return self.try_comment(),
-
 
                 // 获取字符串
                 '\'' | '"' => return self.string_token(),
                 '@' => {
+                    let start_pos = self.pos_index;
                     self.advance();
-                    match self.get_token() {
-                        Ok(token) => {
-                            match token {
-                                Token::IdentToken(str, _) => {
-                                    self.advance();
-                                    return Ok(Token::AtKeywordToken(str, self.range));
-                                }
-                                _ => {
-                                    dbg!(token);
-                                    panic!("some thing is error");
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            dbg!(e);
-                            panic!("some thing is error");
-                        }
+                    if self.get_peek_token_by_type(TokenType::IdentToken) {
+                        self.eat_token();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
+                    } else {
+                        panic!("get at key word error")
                     }
                 }
                 '#' => {
+                    let start_pos = self.pos_index;
                     self.advance();
-                    let mut result = String::new();
-                    self.match_word(&mut result);
-                    return Ok(HashToken(result, self.range));
+                    self.match_word();
+                    let end_pos = self.pos_index;
+                    return Token(HashToken, Range::new(start_pos, end_pos));
                 }
 
                 ch if ch.is_ascii_digit() || ch == '+' || ch == '-' => {
-                    let mut token = self.try_digit()?;
+                    let start_pos = self.pos_index;
+                    let mut token = self.try_digit();
 
-                    if matches!(self.peek(),Some('%')) {
+                    if matches!(self.peek_ch(), Some('%')) {
                         self.advance();
-                        match token {
-                            Token::Digital(str, _) => {
-                                token = Token::PercentageToken(str, self.range);
-                            }
-                            _ => {}
-                        }
+                        let end_pos = self.pos_index;
+
+                        token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
                     }
-                    return Ok(token);
+                    return token;
                 }
                 _ => {
-                    let mut token = self.ident_token()?;
-                    if let Token::IdentToken(str, _) = &token {
-                        if str == "url" {
-                            let mut result = String::new();
-                            if matches!(self.cur_char(),Some('(')) {
-                                self.advance();
-                            } else {
-                                todo!()
-                            }
+                    let start_pos = self.pos_index;
+                    let mut token = self.ident_token();
 
-                            self.skip_whitespace();
-                            while let Some((escape_ch, _)) = self.escape() {
-                                if matches!(escape_ch,
-                                    '('|')'|'\\'|'"'|'\'' | '\u{0000}' ..='\u{0008}' | '\u{000b}' | '\u{000e}' | '\u{001f}' | '\u{007f}') || escape_ch.is_whitespace() {
-                                    dbg!(escape_ch);
-                                    panic!("bad url token");
-                                } else {
-                                    result.push(escape_ch);
-                                }
-                            }
-                            self.skip_whitespace();
+                    if token.get_source_code(self.source_code) == "url" {
+                        if matches!(self.cur_char(), Some('(')) {
+                            self.advance();
+                        } else {
+                            todo!()
+                        }
 
-                            if matches!(self.cur_char(),Some(')')) {
-                                self.advance();
-                                token = UrlToken(result, self.range);
+                        self.skip_whitespace();
+                        while let Some((escape_ch, _)) = self.escape() {
+                            if matches!(
+                                escape_ch,
+                                '(' | ')' | '\\' | '"' | '\'' | '\u{0000}'
+                                    ..='\u{0008}'
+                                        | '\u{000b}'
+                                        | '\u{000e}'
+                                        | '\u{001f}'
+                                        | '\u{007f}'
+                            ) || escape_ch.is_whitespace()
+                            {
+                                dbg!(escape_ch);
+                                panic!("bad url token");
                             }
+                        }
+                        self.skip_whitespace();
+
+                        if matches!(self.cur_char(), Some(')')) {
+                            self.advance();
+                            let end_pos = self.pos_index;
+
+                            token = Token(TokenType::UrlToken, Range::new(start_pos, end_pos));
+                        } else {
+                            panic!("parse url token error")
                         }
                     }
-                    if matches!(self.cur_char(),Some('(')) {
+
+                    if matches!(self.cur_char(), Some('(')) {
                         self.advance();
-                        match token {
-                            Token::IdentToken(str, _) => {
-                                token = Token::FunctionToken(str, self.range);
-                            }
-                            _ => {}
-                        }
+                        let end_pos = self.pos_index;
+                        token = Token(TokenType::FunctionToken, Range::new(start_pos, end_pos));
                     };
 
-
-                    return Ok(token);
+                    return token;
                 }
             }
         }
 
-        return Ok(Token::EOF);
+        return Token(TokenType::EOF, Range::new(self.pos_index, self.pos_index));
     }
     //ANCHOR_END: get_token
 
-    fn match_word(&mut self, result: &mut String) {
+    fn match_word(&mut self) {
         while let Some((escape_ch, _)) = self.escape() {
             if matches!(escape_ch,'a'..='z'|'A'..='Z'|'_' | '\u{0080}'..) {
-                result.push(escape_ch);
+                // result.push(escape_ch);
                 dbg!(escape_ch);
                 self.advance();
-            }else{
+            } else {
                 break;
             }
         }
@@ -403,148 +419,66 @@ impl<'a> Lexer<'a> {
         None
     }
 
-
-    fn ident_token(&mut self) -> Result<Token, ErrorKind> {
-        let mut result = String::new();
+    fn ident_token(&mut self) -> Token {
+        let start_pos = self.pos_index;
 
         while let Some(ch) = self.cur_char() {
             if ch == '_' {
-                result.push(ch);
                 self.advance();
-                self.match_word(&mut result);
-            } else if ch == '-' && matches!(self.peek(),Some('-')) {
-                result.push(ch);
-                result.push(ch);
+                self.match_word();
+            } else if ch == '-' && matches!(self.peek_ch(), Some('-')) {
                 self.advance();
                 self.advance();
-                self.match_word(&mut result);
+                self.match_word();
             } else {
-                self.match_word(&mut result);
-                if result.len() == 0 {
-                    return Err(ErrorKind::IdentTokenError(self.range));
+                self.match_word();
+                let end_pos = self.pos_index;
+                if start_pos == end_pos {
+                    panic!("ident token is empty")
                 }
             }
-
-
-            return Ok(Token::IdentToken(result, self.range));
+            let end_pos = self.pos_index;
+            return Token(TokenType::IdentToken, Range::new(start_pos, end_pos));
         }
-        return Ok(Token::IdentToken(result, self.range));
+        let end_pos = self.pos_index;
+        return Token(TokenType::IdentToken, Range::new(start_pos, end_pos));
     }
-}
-
-macro_rules! test_token {
-    ($x:expr,$y:pat_param) => {
-         let mut lexer = Lexer::new($x);
-        match lexer.get_token() {
-            token => {
-                if let Ok(token) = token {
-                    assert!(matches!(token,$y));
-                }
-            }
-        }
-    };
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::token;
+    macro_rules! test_token {
+        ($x:expr,$y:expr) => {
+            let mut lexer = Lexer::new($x);
+            let token = lexer.eat_token();
+            assert!(token.check_type($y));
+        };
+    }
 
     use super::*;
 
     #[test]
     fn test_comment() {
-        test_token!(r#"/*
+        test_token!(
+            r#"/*
         sadfadf
-        */"#,Token::Comment(_,_));
+        */"#,
+            TokenType::Comment
+        );
     }
 
     #[test]
     fn test_ident_token() {
-        test_token!(r#"abc"#,Token::IdentToken(_,_));
+        test_token!(r#"abc"#, TokenType::IdentToken);
     }
 
     #[test]
     fn test_func_token() {
-        test_token!(r#"abc("#,Token::FunctionToken(_,_));
+        test_token!(r#"abc("#, TokenType::FunctionToken);
     }
 
     #[test]
     fn test_at_token() {
-        test_token!(r#"@abc"#,Token::AtKeywordToken(_,_));
-    }
-
-    #[test]
-    fn test_symbol_token() {
-        let mut lexer = Lexer::new(r#""\'()+,-.:;<@[\]{}""#);
-        loop {
-            match lexer.get_token() {
-                token => {
-                    if let Ok(token) = token {
-                        println!("{:#?}", token);
-
-                        if Token::EOF == token {
-                            break;
-                        }
-                    } else {
-                        println!("{:#?}", token);
-                        break;
-                    }
-                }
-            }
-        }
-
-        assert!(true)
-    }
-
-    #[test]
-    fn test_digit_token() {
-        let mut lexer = Lexer::new(r#"1.1e"#);
-        match lexer.get_token() {
-            Ok(token) => {
-                println!("{}", token.str());
-            }
-            Err(e) => {
-                println!("{:#?}", e);
-            }
-        }
-        assert!(true)
-    }
-
-    #[test]
-    fn test_peek() {
-        let mut lexer = Lexer::new(r#"1.1e"#);
-        let mut c = "123456".char_indices();
-        println!("{}", c.clone().nth(0).unwrap().1);
-        println!("{}", c.clone().nth(0).unwrap().1);
-        println!("{}", c.clone().nth(0).unwrap().1);
-        println!("{}", c.clone().nth(0).unwrap().1);
-        println!("{}", c.nth(0).unwrap().1);
-        println!("{}", c.nth(0).unwrap().1);
-        println!("{}", c.nth(0).unwrap().1);
-        println!("{}", c.nth(0).unwrap().1);
-        // assert_eq!(Some('.'), lexer.peek());
-        // lexer.advance();
-        // assert_eq!(Some('1'), lexer.peek());
-        // lexer.advance();
-        // assert_eq!(Some('.'), lexer.peek());
-        // lexer.advance();
-        // assert_eq!(Some('.'), lexer.peek());
-    }
-
-
-    #[test]
-    fn test_string() {
-        let mut lexer = Lexer::new(
-            r#"abc
-       "#,
-        );
-        match lexer.get_token() {
-            Ok(token) => {
-                dbg!(token);
-            }
-            Err(e) => {
-                dbg!(e);
-            }
-        }
+        test_token!(r#"@abc"#, TokenType::AtKeywordToken);
     }
 }
