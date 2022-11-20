@@ -21,7 +21,10 @@ fn check_token_type() {
 
 #[test]
 fn get_source_code() {
-    assert_eq!(Token(TokenType::EOF, Range::new(0,2)).get_source_code("raw"),"ra")
+    assert_eq!(
+        Token(TokenType::EOF, Range::new(0, 2)).get_source_code("raw"),
+        "ra"
+    )
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -80,4 +83,70 @@ pub enum TokenType {
     UrlToken,
     CDOToken,
     CDCToken,
+}
+
+#[derive(Debug)]
+pub enum SyntaxNode {
+    CommentNode(CommentNode),
+    Stylesheet(Stylesheet),
+    Rule(Rule),
+    Token(Token),
+    Select(Select),
+    ChartSet(ChartSet),
+    Import(Import),
+    Medium(Medium),
+    Function(Function),
+    Expression(Expression),
+    Term(Term),
+}
+
+#[derive(Debug)]
+pub struct Function {
+    pub expr: Expression,
+}
+
+#[derive(Debug)]
+pub struct Expression {
+    pub terms: Term,
+}
+
+#[derive(Debug)]
+pub struct Term {
+    // 怎么不加Box也能用啊
+    pub token: Box<SyntaxNode>,
+}
+
+
+
+#[derive(Debug)]
+pub struct CommentNode {
+    pub(crate) node: Token,
+}
+
+#[derive(Debug)]
+pub struct Stylesheet {
+    pub(crate) nodes: Vec<SyntaxNode>,
+}
+#[derive(Debug)]
+pub struct Rule {
+    pub(crate) rules: Vec<SyntaxNode>,
+}
+#[derive(Debug)]
+pub struct Select {
+    pub tokens: Vec<Token>,
+}
+
+#[derive(Debug)]
+pub struct ChartSet {
+    pub token: Token,
+}
+
+#[derive(Debug)]
+pub struct Import {
+    pub token: Vec<SyntaxNode>,
+}
+
+#[derive(Debug)]
+pub struct Medium {
+    pub token: Token,
 }
