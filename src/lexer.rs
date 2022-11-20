@@ -19,7 +19,7 @@ pub struct Lexer<'a> {
     pos_index: usize,
     peek_token: Option<Token>,
     cur_token: Option<Token>,
-    source_code: &'a str,
+    pub source_code: &'a str,
     source_code_length: usize,
     chars: std::str::CharIndices<'a>,
 }
@@ -39,7 +39,10 @@ impl<'a> Lexer<'a> {
 
     pub fn peek_ch(&mut self) -> Option<char> {
         let cur_index = self.pos_index;
-        dbg!(cur_index, self.chars.clone().nth(cur_index + 1).map(|x| x.1));
+        // dbg!(
+        //     cur_index,
+        //     self.chars.clone().nth(cur_index + 1).map(|x| x.1)
+        // );
         self.chars.clone().nth(cur_index + 1).map(|x| x.1)
     }
 
@@ -53,38 +56,44 @@ impl<'a> Lexer<'a> {
     pub fn string_token(&mut self) -> Token {
         let mut result = String::new();
         let start_pos = self.pos_index;
-        let mut end_pos = self.pos_index;
 
         if let Some(ch) = self.cur_char() {
-            let mut f = |ch: char| -> bool {
-                if let Some((escape_ch, is_escape)) = self.escape() {
-                    result.push(escape_ch);
-                    if escape_ch == ch && is_escape {
-                        return true;
-                    }
-                } else {
-                    panic!("parse string token error");
-                }
-                return false;
-            };
             match ch {
-                '\'' => loop {
-                    if f('\'') {
-                        end_pos = self.pos_index;
-                        break;
+                '\'' => {
+                    self.advance();
+                    loop {
+                        if let Some((escape_ch, _)) = self.escape() {
+                            result.push(escape_ch);
+                            self.advance();
+                            if escape_ch == '\'' {
+                                let end_pos = self.pos_index;
+                                return Token(TokenType::Str, Range::new(start_pos, end_pos));
+                            }
+                        } else {
+                            panic!("parse string token error");
+                        }
                     }
-                },
-                '"' => loop {
-                    if f('"') {
-                        end_pos = self.pos_index;
-                        break;
+                }
+                '"' => {
+                    self.advance();
+                    loop {
+                        if let Some((escape_ch, _)) = self.escape() {
+                            result.push(escape_ch);
+                            self.advance();
+                            if escape_ch == '"' {
+                                let end_pos = self.pos_index;
+                                return Token(TokenType::Str, Range::new(start_pos, end_pos));
+                            }
+                        } else {
+                            panic!("parse string token error");
+                        }
                     }
-                },
+                }
                 _ => {}
             }
         }
 
-        Token(TokenType::Str, Range::new(start_pos, end_pos))
+        panic!("parse string token error")
     }
 
     fn try_comment(&mut self) -> Token {
@@ -201,7 +210,7 @@ impl<'a> Lexer<'a> {
         let cur_index = self.pos_index;
         if cur_index < self.source_code_length {
             if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
-                dbg!(cur_char);
+                // dbg!(cur_char);
                 return Some(cur_char);
             }
         }
@@ -250,6 +259,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 continue;
             }
+            dbg!(ch);
             match ch {
                 ch @ ('(' | ')' | ',' | '.' | ':' | ';' | '<' | '[' | '\\' | ']' | '{' | '}') => {
                     let start_pos = self.pos_index;
@@ -315,40 +325,9 @@ impl<'a> Lexer<'a> {
                 _ => {
                     let start_pos = self.pos_index;
                     let mut token = self.ident_token();
-
-                    if token.get_source_code(self.source_code) == "url" {
-                        if matches!(self.cur_char(), Some('(')) {
-                            self.advance();
-                        } else {
-                            todo!()
-                        }
-
-                        self.skip_whitespace();
-                        while let Some((escape_ch, _)) = self.escape() {
-                            if matches!(
-                                escape_ch,
-                                '(' | ')' | '\\' | '"' | '\'' | '\u{0000}'
-                                    ..='\u{0008}'
-                                        | '\u{000b}'
-                                        | '\u{000e}'
-                                        | '\u{001f}'
-                                        | '\u{007f}'
-                            ) || escape_ch.is_whitespace()
-                            {
-                                dbg!(escape_ch);
-                                panic!("bad url token");
-                            }
-                        }
-                        self.skip_whitespace();
-
-                        if matches!(self.cur_char(), Some(')')) {
-                            self.advance();
-                            let end_pos = self.pos_index;
-
-                            token = Token(TokenType::UrlToken, Range::new(start_pos, end_pos));
-                        } else {
-                            panic!("parse url token error")
-                        }
+                    dbg!(token.get_source_code(self.source_code));
+                    if let Some(value) = self.parse_url_token(&mut token, start_pos) {
+                        return value;
                     }
 
                     if matches!(self.cur_char(), Some('(')) {
@@ -364,13 +343,66 @@ impl<'a> Lexer<'a> {
 
         return Token(TokenType::EOF, Range::new(self.pos_index, self.pos_index));
     }
+
+    fn parse_url_token(&mut self, token: &mut Token, start_pos: usize) -> Option<Token> {
+        if token.get_source_code(self.source_code) == "url" {
+            if matches!(self.cur_char(), Some('(')) {
+                self.advance();
+            } else {
+                panic!("expect char '('")
+            }
+
+            self.skip_whitespace();
+
+            if matches!(self.cur_char(), Some('\'') | Some('"')) {
+                match self.get_token() {
+                    token if token.check_type(TokenType::Str) => {}
+                    _ => panic!("get at key word error"),
+                }
+            } else {
+                while let Some((escape_ch, is_escape)) = self.escape() {
+                    if is_escape {
+                        self.advance();
+                        continue;
+                    }
+                    // 	([!#$%&*-~]|{nonascii}|{escape})*
+                    match escape_ch {
+                        ch if !ch.is_ascii() || ch.is_ascii_alphanumeric() => {
+                            self.advance();
+                        }
+                        '!' | '#' | '$' | '%' | '&' | '*' | '-' | '~' | '.' => {
+                            self.advance();
+                        }
+                        ')' => {
+                            break;
+                        }
+                        ch => {
+                            panic!("bad url token {}", ch);
+                        }
+                    }
+                }
+            }
+
+            self.skip_whitespace();
+
+            if matches!(self.cur_char(), Some(')')) {
+                self.advance();
+                let end_pos = self.pos_index;
+
+                *token = Token(TokenType::UrlToken, Range::new(start_pos, end_pos));
+            } else {
+                panic!("parse url token error")
+            }
+        }
+        None
+    }
     //ANCHOR_END: get_token
 
     fn match_word(&mut self) {
         while let Some((escape_ch, _)) = self.escape() {
             if matches!(escape_ch,'a'..='z'|'A'..='Z'|'_' | '\u{0080}'..) {
                 // result.push(escape_ch);
-                dbg!(escape_ch);
+                // dbg!(escape_ch);
                 self.advance();
             } else {
                 break;
@@ -447,6 +479,8 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     macro_rules! test_token {
         ($x:expr,$y:expr) => {
             let mut lexer = Lexer::new($x);
@@ -454,8 +488,6 @@ mod tests {
             assert!(token.check_type($y));
         };
     }
-
-    use super::*;
 
     #[test]
     fn test_comment() {
@@ -480,5 +512,23 @@ mod tests {
     #[test]
     fn test_at_token() {
         test_token!(r#"@abc"#, TokenType::AtKeywordToken);
+    }
+
+    #[test]
+    fn test_string_token() {
+        test_token!(r#""abc""#, TokenType::Str);
+    }
+
+    #[test]
+    fn test_url_token() {
+        test_token!(r#" url(links.css)"#, TokenType::UrlToken);
+    }
+
+    #[test]
+    fn test_complexe_url_token() {
+        test_token!(
+            r#" url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='45'%3E%3Cpath d='M10 10h60' stroke='%2300F' stroke-width='5'/%3E%3Cpath d='M10 20h60' stroke='%230F0' stroke-width='5'/%3E%3Cpath d='M10 30h60' stroke='red' stroke-width='5'/%3E%3C/svg%3E")"#,
+            TokenType::UrlToken
+        );
     }
 }
