@@ -1,7 +1,7 @@
 extern crate core;
 
-pub mod range;
-pub mod lexer;
-pub mod token;
-mod parser;
 pub mod ast;
+pub mod lexer;
+pub mod parser;
+pub mod range;
+pub mod token;

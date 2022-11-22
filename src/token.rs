@@ -1,4 +1,9 @@
-use crate::range::Range;
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    ast::{AstNode, AstNodeType},
+    range::Range,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Token(pub TokenType, pub Range);
@@ -27,9 +32,19 @@ fn get_source_code() {
     )
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+impl From<Token> for AstNode<TokenType> {
+    fn from(token: Token) -> Self {
+        Self {
+            node_type: AstNodeType(token.0),
+            range: token.1,
+            children: None,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenType {
-    EOF,
+    EOF = 1,
     /** ;*/
     Semi,
     /** . */
@@ -71,10 +86,14 @@ pub enum TokenType {
 
     /** # */
     NumberSign,
+
+    /** / */
+    ForwardSlash,
     KeyWord,
     Str,
     Digital,
     IdentToken,
+    Dimension,
     Comment,
     FunctionToken,
     PercentageToken,
@@ -83,70 +102,42 @@ pub enum TokenType {
     UrlToken,
     CDOToken,
     CDCToken,
+    LengthToken,
+
+    // ast node type
+    Stylesheet,
+    Rule,
+    Token,
+    Select,
+    ChartSet,
+    Import,
+    Medium,
+    Function,
+    Expression,
+    Term,
+    MediumList,
+    Page,
+    Property,
+    Declaration,
+    Important,
+    // '/' or ','
+    Operator,
+    RuleList,
+    DeclarationList,
 }
 
-#[derive(Debug)]
-pub enum SyntaxNode {
-    CommentNode(CommentNode),
-    Stylesheet(Stylesheet),
-    Rule(Rule),
-    Token(Token),
-    Select(Select),
-    ChartSet(ChartSet),
-    Import(Import),
-    Medium(Medium),
-    Function(Function),
-    Expression(Expression),
-    Term(Term),
+impl Default for TokenType {
+    fn default() -> Self {
+        TokenType::EOF
+    }
 }
 
-#[derive(Debug)]
-pub struct Function {
-    pub expr: Expression,
-}
-
-#[derive(Debug)]
-pub struct Expression {
-    pub terms: Term,
-}
-
-#[derive(Debug)]
-pub struct Term {
-    // 怎么不加Box也能用啊
-    pub token: Box<SyntaxNode>,
-}
-
-
-
-#[derive(Debug)]
-pub struct CommentNode {
-    pub(crate) node: Token,
-}
-
-#[derive(Debug)]
-pub struct Stylesheet {
-    pub(crate) nodes: Vec<SyntaxNode>,
-}
-#[derive(Debug)]
-pub struct Rule {
-    pub(crate) rules: Vec<SyntaxNode>,
-}
-#[derive(Debug)]
-pub struct Select {
-    pub tokens: Vec<Token>,
-}
-
-#[derive(Debug)]
-pub struct ChartSet {
-    pub token: Token,
-}
-
-#[derive(Debug)]
-pub struct Import {
-    pub token: Vec<SyntaxNode>,
-}
-
-#[derive(Debug)]
-pub struct Medium {
-    pub token: Token,
+impl From<TokenType> for AstNode<TokenType> {
+    fn from(token_type: TokenType) -> Self {
+        Self {
+            node_type: AstNodeType(token_type),
+            range: Range::default(),
+            children: None,
+        }
+    }
 }

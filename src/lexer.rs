@@ -98,9 +98,9 @@ impl<'a> Lexer<'a> {
 
     fn try_comment(&mut self) -> Token {
         if let Some(ch) = self.cur_char() {
-            if ch == '/' {
-                let start_pos = self.pos_index;
+            let start_pos = self.pos_index;
 
+            if ch == '/' {
                 if matches!(self.peek_ch(), Some('*')) {
                     self.advance();
                     self.advance();
@@ -115,6 +115,10 @@ impl<'a> Lexer<'a> {
                             self.advance()
                         }
                     }
+                } else {
+                    self.advance();
+                    let end_pos = self.pos_index;
+                    return Token(TokenType::ForwardSlash, Range::new(start_pos, end_pos));
                 }
             }
         }
@@ -288,6 +292,24 @@ impl<'a> Lexer<'a> {
                     return Token(token_type, Range::new(start_pos, end_pos));
                 }
                 '/' => return self.try_comment(),
+                '!' => {
+                    let start_pos = self.pos_index;
+                    self.advance();
+                    loop {
+                        if self.get_peek_token_by_type(TokenType::Comment) {
+                            self.eat_token();
+                        } else {
+                            break;
+                        }
+                    }
+                    if self.get_peek_token_by_type(TokenType::IdentToken) {
+                        self.eat_token();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::Important, Range::new(start_pos, end_pos));
+                    } else {
+                        panic!("get at ! important error")
+                    }
+                }
 
                 // 获取字符串
                 '\'' | '"' => return self.string_token(),
@@ -319,7 +341,14 @@ impl<'a> Lexer<'a> {
                         let end_pos = self.pos_index;
 
                         token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
+                    } else if matches!(self.peek_ch(),Some(ch) if !ch.is_whitespace()) {
+                        if self.get_peek_token_by_type(TokenType::IdentToken) {
+                            self.eat_token();
+                            let end_pos = self.pos_index;
+                            return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
+                        }
                     }
+
                     return token;
                 }
                 _ => {
@@ -485,6 +514,7 @@ mod tests {
         ($x:expr,$y:expr) => {
             let mut lexer = Lexer::new($x);
             let token = lexer.eat_token();
+            dbg!(&token);
             assert!(token.check_type($y));
         };
     }
@@ -502,6 +532,11 @@ mod tests {
     #[test]
     fn test_ident_token() {
         test_token!(r#"abc"#, TokenType::IdentToken);
+    }
+
+    #[test]
+    fn test_comment_token() {
+        test_token!(r#"/** abc */"#, TokenType::Comment);
     }
 
     #[test]
@@ -530,5 +565,15 @@ mod tests {
             r#" url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='45'%3E%3Cpath d='M10 10h60' stroke='%2300F' stroke-width='5'/%3E%3Cpath d='M10 20h60' stroke='%230F0' stroke-width='5'/%3E%3Cpath d='M10 30h60' stroke='red' stroke-width='5'/%3E%3C/svg%3E")"#,
             TokenType::UrlToken
         );
+    }
+
+    #[test]
+    fn test_important_token() {
+        test_token!(r#" ! important"#, TokenType::Important);
+    }
+
+    #[test]
+    fn test_length_token() {
+        test_token!(r#"123px"#, TokenType::Dimension);
     }
 }
