@@ -1,0 +1,337 @@
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser};
+
+    #[test]
+    fn charset_test() {
+        let mut lexer = Lexer::new(r#"@charset "utf8";"#);
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_charset();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn import_url_test() {
+        let mut lexer = Lexer::new(
+            r#"@import "custom.css";
+            @import url("bluish.css");"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+
+        parser.parse_import_token();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn import_string_test() {
+        let mut lexer = Lexer::new(r#"@import "custom.css";"#);
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_import_token();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn comment_test() {
+        let mut lexer = Lexer::new(
+            r#"/* adfsdf
+        
+        
+        
+        
+        */"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_comment();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn function_test() {
+        let mut lexer = Lexer::new(r#"a(10px + 100px)"#);
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_function();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn declaration_list_test() {
+        let mut lexer = Lexer::new(
+            r#"{
+            a: 123
+        }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration_list();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn declaration_list1_test() {
+        let mut lexer = Lexer::new(
+            r#"{
+            -a: 123
+        }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration_list();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn declaration_list2_test() {
+        let mut lexer = Lexer::new(
+            r#"{
+            a: 0
+        }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration_list();
+        builder.finish();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn at_rule_test() {
+        let mut lexer = Lexer::new(
+            r#"@font 123123ks sdafjk asdfjksadf sadfjk {
+
+            }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_at_rule();
+        builder.finish();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn at_select_test() {
+        let mut lexer = Lexer::new(r#"div.class "#);
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_selector();
+        builder.finish();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn select3_test() {
+        let mut lexer = Lexer::new(
+            r#"  button::-moz-focus-inner,
+        input::-moz-focus-inner {
+            padding: 0;
+            border: 0
+        }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_selector();
+        builder.finish();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            article,
+            aside,
+            details,
+            figcaption,
+            figure,
+            footer,
+            header,
+            hgroup,
+            main,
+            menu,
+            nav,
+            section,
+            summary"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_selector();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple1_test() {
+        let mut lexer = Lexer::new(
+            r#"{
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%
+            }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration_list();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple2_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            audio:not([controls])"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_selector();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple3_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            {
+                margin: .67em 0;
+                font-size: 2em
+            }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration_list();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+    #[test]
+    fn simple4_test() {
+        let mut lexer = Lexer::new(
+            r#"
+    @media print {
+        *,
+        :after,
+        :before {
+            box-shadow: none !important
+        }
+    
+        a,
+        a:visited {
+            text-decoration: underline
+        }
+    }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_at_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple5_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @font-face {
+                src: url(../fonts/glyphicons-halflings-regular.eot);
+                src: url(../fonts/glyphicons-halflings-regular.eot?#iefix) format('embedded-opentype'), url(../fonts/glyphicons-halflings-regular.woff2) format('woff2'), url(../fonts/glyphicons-halflings-regular.woff) format('woff'), url(../fonts/glyphicons-halflings-regular.ttf) format('truetype'), url(../fonts/glyphicons-halflings-regular.svg#glyphicons_halflingsregular) format('svg')
+            }"#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_at_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple6_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            html {
+                font-size: 10px;
+                -webkit-tap-highlight-color: rgba(0, 1, 2, 3)
+            } 
+          
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple7_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            table col[class*=col-] {
+                position: static;
+                display: table-column;
+                float: none
+            }
+          
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple8_test() {
+        let mut lexer = Lexer::new(
+            r#"
+         
+                filter: progid:DXImageTransform.Microsoft.gradient(enabled=false)
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_declaration();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple9_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            -webkit-linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_function();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+}

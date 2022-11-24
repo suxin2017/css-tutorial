@@ -27,8 +27,8 @@ impl<T: Default + Serialize> Default for AstTree<T> {
 pub struct AstTreeBuilder<T: Debug + Default + Serialize> {
     pub ast_tree: AstTree<T>,
     // uszie 标记子数组开始
-    parent: Vec<(AstNode<T>, usize)>,
-    children: Vec<AstNode<T>>,
+    pub parent: Vec<(AstNode<T>, usize)>,
+    pub children: Vec<AstNode<T>>,
 }
 
 impl<T: Default + Serialize> AstTree<T> {
@@ -72,11 +72,8 @@ impl<T: Debug + Default + Serialize> AstTreeBuilder<T> {
         let end_child = children.last();
 
         parent.range = Range::new(
-            start_child
-                .unwrap_or(&AstNode::default())
-                .range
-                .start_pos_index,
-            end_child.unwrap_or(&AstNode::default()).range.end_pos_index,
+            start_child.unwrap_or(&AstNode::default()).range.start_pos,
+            end_child.unwrap_or(&AstNode::default()).range.end_pos,
         );
 
         parent.children = Some(children);
@@ -121,8 +118,8 @@ mod tests {
         fn from(token: SynataxNodeType) -> Self {
             Self {
                 range: Range {
-                    start_pos_index: token as usize,
-                    end_pos_index: token as usize * 2,
+                    start_pos: token as usize,
+                    end_pos: token as usize * 2,
                 },
                 node_type: token.into(),
                 children: None,

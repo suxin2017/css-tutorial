@@ -1,9 +1,10 @@
+use std::fs;
+
 use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser};
 fn main() {
-    let mut lexer = Lexer::new(r#"@charset "utf8";"#);
+    let binding = fs::read_to_string("test.css").unwrap();
+    let mut lexer = Lexer::new(&binding);
     let mut builder = AstTreeBuilder::new();
     let mut parser = Parser::new(&mut lexer, &mut builder);
-    let syntax_token = parser.parse();
-    dbg!(syntax_token);
-    dbg!(builder.ast_tree);
+    parser.parse();
 }

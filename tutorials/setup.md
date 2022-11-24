@@ -6,6 +6,12 @@
 
 检测你的安装
 
+<script type="module">
+    import init,{sum} from "./pkg/css_tutorial.js";
+init().then(()=>{
+    console.log(JSON.parse(sum()))
+})
+</script>
 ```bash
 rustc --version
 ```

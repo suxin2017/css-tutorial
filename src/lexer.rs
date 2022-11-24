@@ -11,14 +11,12 @@ pub enum ErrorKind {
     CommentTokenError,
 }
 
-pub(crate) type LexResult<T> = Result<T, ErrorKind>;
-
 // ANCHOR: lexer
 #[derive(Debug)]
 pub struct Lexer<'a> {
     pos_index: usize,
     peek_token: Option<Token>,
-    cur_token: Option<Token>,
+    cur_char: Option<char>,
     pub source_code: &'a str,
     source_code_length: usize,
     chars: std::str::CharIndices<'a>,
@@ -27,29 +25,31 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new(source_code: &'a str) -> Self {
-        Self {
+        let mut lexer = Self {
             chars: source_code.char_indices(),
             pos_index: 0,
+            cur_char: None,
             peek_token: None,
-            cur_token: None,
             source_code_length: source_code.len(),
             source_code,
-        }
+        };
+        lexer.advance();
+        lexer
     }
 
     pub fn peek_ch(&mut self) -> Option<char> {
-        let cur_index = self.pos_index;
-        // dbg!(
-        //     cur_index,
-        //     self.chars.clone().nth(cur_index + 1).map(|x| x.1)
-        // );
-        self.chars.clone().nth(cur_index + 1).map(|x| x.1)
+        self.chars.clone().nth(0).map(|x| x.1)
     }
-
+    pub fn cur_char(&mut self) -> Option<char> {
+        return self.cur_char;
+    }
     pub fn advance(&mut self) {
-        let cur_index = self.pos_index;
-        if cur_index < self.source_code_length {
-            self.pos_index += 1;
+        if let Some((pos, ch)) = self.chars.next() {
+            // dbg!(pos, ch);
+            self.pos_index = pos;
+            self.cur_char = Some(ch);
+        } else {
+            self.cur_char = None;
         }
     }
 
@@ -62,9 +62,11 @@ impl<'a> Lexer<'a> {
                 '\'' => {
                     self.advance();
                     loop {
-                        if let Some((escape_ch, _)) = self.escape() {
+                        if let Some((escape_ch, is_escape)) = self.escape() {
                             result.push(escape_ch);
-                            self.advance();
+                            if !is_escape {
+                                self.advance();
+                            }
                             if escape_ch == '\'' {
                                 let end_pos = self.pos_index;
                                 return Token(TokenType::Str, Range::new(start_pos, end_pos));
@@ -77,9 +79,11 @@ impl<'a> Lexer<'a> {
                 '"' => {
                     self.advance();
                     loop {
-                        if let Some((escape_ch, _)) = self.escape() {
+                        if let Some((escape_ch, is_escape)) = self.escape() {
                             result.push(escape_ch);
-                            self.advance();
+                            if !is_escape {
+                                self.advance();
+                            }
                             if escape_ch == '"' {
                                 let end_pos = self.pos_index;
                                 return Token(TokenType::Str, Range::new(start_pos, end_pos));
@@ -109,6 +113,8 @@ impl<'a> Lexer<'a> {
                         if ch == '*' && matches!(self.peek_ch(), Some('/')) {
                             self.advance();
                             self.advance();
+                            // dbg!(ch, self.peek_ch(), self.cur_char);
+
                             let end_pos = self.pos_index;
                             return Token(TokenType::Comment, Range::new(start_pos, end_pos));
                         } else {
@@ -126,11 +132,9 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn try_digit(&mut self) -> Token {
-        let mut result = String::new();
         let start_pos = self.pos_index;
         if let Some(ch) = self.cur_char() {
-            if matches!(ch, '+' | '-') {
-                result.push(ch);
+            if matches!(ch, '+' | '-' | '.') {
                 self.advance();
             }
 
@@ -138,12 +142,10 @@ impl<'a> Lexer<'a> {
             if let Some(ch1) = self.cur_char() {
                 match ch1 {
                     ch1 if ch1.is_ascii_digit() => {
-                        result.push(ch1);
                         self.advance();
 
                         while let Some(ch1) = self.cur_char() {
                             if ch1.is_ascii_digit() {
-                                result.push(ch1);
                                 self.advance();
                             } else {
                                 break;
@@ -151,18 +153,27 @@ impl<'a> Lexer<'a> {
                         }
                         if let Some(ch1) = self.cur_char() {
                             if matches!(ch1, '.') {
-                                result.push(ch1);
                                 self.advance();
                             }
                         }
                     }
                     '.' => {
-                        result.push(ch1);
-                        self.advance();
+                        if let Some(peek_ch) = self.peek_ch() {
+                            if peek_ch.is_ascii_digit() {
+                                self.advance();
+                            } else {
+                                return Token(
+                                    TokenType::Plus,
+                                    Range::new(start_pos, start_pos + 1),
+                                );
+                            }
+                        }
                     }
                     _ => {
                         return if ch == '+' {
                             Token(TokenType::Plus, Range::new(start_pos, start_pos + 1))
+                        } else if ch == '.' {
+                            Token(TokenType::Dot, Range::new(start_pos, start_pos + 1))
                         } else {
                             Token(TokenType::Minus, Range::new(start_pos, start_pos + 1))
                         };
@@ -170,13 +181,11 @@ impl<'a> Lexer<'a> {
                 }
                 if let Some(ch1) = self.cur_char() {
                     if ch1.is_ascii_digit() {
-                        result.push(ch1);
                         self.advance();
                     }
                 }
                 while let Some(ch1) = self.cur_char() {
                     if ch1.is_ascii_digit() {
-                        result.push(ch1);
                         self.advance();
                     } else {
                         break;
@@ -184,17 +193,14 @@ impl<'a> Lexer<'a> {
                 }
                 if let Some(ch2) = self.cur_char() {
                     if matches!(ch2, 'e' | 'E') {
-                        result.push(ch2);
                         self.advance();
                         if let Some(ch1) = self.cur_char() {
                             if matches!(ch1, '+' | '-') {
-                                result.push(ch1);
                                 self.advance();
                             }
                         }
                         while let Some(ch1) = self.cur_char() {
                             if ch1.is_ascii_digit() {
-                                result.push(ch1);
                                 self.advance();
                             } else {
                                 break;
@@ -207,18 +213,7 @@ impl<'a> Lexer<'a> {
             let end_pos = self.pos_index;
             return Token(TokenType::Digital, Range::new(start_pos, end_pos));
         }
-        panic!("parse digit error");
-    }
-
-    pub fn cur_char(&mut self) -> Option<char> {
-        let cur_index = self.pos_index;
-        if cur_index < self.source_code_length {
-            if let Some((_, cur_char)) = self.source_code.char_indices().clone().nth(cur_index) {
-                // dbg!(cur_char);
-                return Some(cur_char);
-            }
-        }
-        None
+        panic!("parse digit error {:?} {:?}", self.cur_char, self.pos_index);
     }
 
     pub fn skip_whitespace(&mut self) {
@@ -263,24 +258,25 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 continue;
             }
-            dbg!(ch);
             match ch {
-                ch @ ('(' | ')' | ',' | '.' | ':' | ';' | '<' | '[' | '\\' | ']' | '{' | '}') => {
+                ch @ ('(' | ')' | ',' | ':' | ';' | '<' | '>' | '[' | '\\' | ']' | '{' | '}'
+                | '=') => {
                     let start_pos = self.pos_index;
                     // 匹配特殊的的符号
                     let token_type = match ch {
                         '(' => TokenType::LeftParenthesis,
                         ')' => TokenType::RightParenthesis,
                         ',' => TokenType::Comma,
-                        '.' => TokenType::Dot,
                         ':' => TokenType::Colon,
                         ';' => TokenType::Semi,
                         '<' => TokenType::LessThan,
+                        '>' => TokenType::MoreThan,
                         '[' => TokenType::LeftSquareBracket,
                         '\\' => TokenType::ReverseSolidus,
-                        ']' => TokenType::RightCurlyBracket,
+                        ']' => TokenType::RightSquareBracket,
                         '{' => TokenType::LeftCurlyBracket,
                         '}' => TokenType::RightCurlyBracket,
+                        '=' => TokenType::Equal,
                         _ => {
                             panic!("不可能发生")
                         }
@@ -310,7 +306,45 @@ impl<'a> Lexer<'a> {
                         panic!("get at ! important error")
                     }
                 }
-
+                '^' => {
+                    let start_pos = self.pos_index;
+                    self.advance();
+                    if matches!(self.cur_char(), Some('=')) {
+                        self.advance();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::Exclude, Range::new(start_pos, end_pos));
+                    }
+                }
+                '*' => {
+                    let start_pos = self.pos_index;
+                    self.advance();
+                    if matches!(self.cur_char(), Some('=')) {
+                        self.advance();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::AllMatch, Range::new(start_pos, end_pos));
+                    } else {
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::Asterisk, Range::new(start_pos, end_pos));
+                    }
+                }
+                '~' => {
+                    let start_pos = self.pos_index;
+                    self.advance();
+                    if matches!(self.cur_char(), Some('=')) {
+                        self.advance();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::Includes, Range::new(start_pos, end_pos));
+                    }
+                }
+                '|' => {
+                    self.advance();
+                    let start_pos = self.pos_index;
+                    if matches!(self.peek_ch(), Some('=')) {
+                        self.advance();
+                        let end_pos = self.pos_index;
+                        return Token(TokenType::Dashmatch, Range::new(start_pos, end_pos));
+                    }
+                }
                 // 获取字符串
                 '\'' | '"' => return self.string_token(),
                 '@' => {
@@ -332,21 +366,32 @@ impl<'a> Lexer<'a> {
                     return Token(HashToken, Range::new(start_pos, end_pos));
                 }
 
-                ch if ch.is_ascii_digit() || ch == '+' || ch == '-' => {
+                ch if ch.is_ascii_digit() || ch == '.' || ch == '+' || ch == '-' => {
                     let start_pos = self.pos_index;
                     let mut token = self.try_digit();
-
-                    if matches!(self.peek_ch(), Some('%')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-
-                        token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
-                    } else if matches!(self.peek_ch(),Some(ch) if !ch.is_whitespace()) {
-                        if self.get_peek_token_by_type(TokenType::IdentToken) {
-                            self.eat_token();
+                    if token.check_type(TokenType::Digital) {
+                        if matches!(self.cur_char(), Some('%')) {
+                            self.advance();
                             let end_pos = self.pos_index;
-                            return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
+
+                            token =
+                                Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
+                        } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'))
+                        {
+                            if self.get_peek_token_by_type(TokenType::IdentToken) {
+                                self.eat_token();
+                                let end_pos = self.pos_index;
+                                return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
+                            }
                         }
+                    }
+                    if token.check_type(TokenType::Minus)
+                        && (self.get_peek_token_by_type(TokenType::IdentToken)
+                            || self.get_peek_token_by_type(TokenType::FunctionToken))
+                    {
+                        let token = self.eat_token();
+                        let end_pos = self.pos_index;
+                        return Token(token.0, Range::new(start_pos, end_pos));
                     }
 
                     return token;
@@ -354,17 +399,14 @@ impl<'a> Lexer<'a> {
                 _ => {
                     let start_pos = self.pos_index;
                     let mut token = self.ident_token();
-                    dbg!(token.get_source_code(self.source_code));
                     if let Some(value) = self.parse_url_token(&mut token, start_pos) {
                         return value;
                     }
-
                     if matches!(self.cur_char(), Some('(')) {
                         self.advance();
                         let end_pos = self.pos_index;
                         token = Token(TokenType::FunctionToken, Range::new(start_pos, end_pos));
                     };
-
                     return token;
                 }
             }
@@ -391,7 +433,6 @@ impl<'a> Lexer<'a> {
             } else {
                 while let Some((escape_ch, is_escape)) = self.escape() {
                     if is_escape {
-                        self.advance();
                         continue;
                     }
                     // 	([!#$%&*-~]|{nonascii}|{escape})*
@@ -399,7 +440,8 @@ impl<'a> Lexer<'a> {
                         ch if !ch.is_ascii() || ch.is_ascii_alphanumeric() => {
                             self.advance();
                         }
-                        '!' | '#' | '$' | '%' | '&' | '*' | '-' | '~' | '.' => {
+                        '!' | '#' | '$' | '%' | '&' | '*' | '-' | '~' | '.' | '/' | '?' | '_'
+                        | '+' => {
                             self.advance();
                         }
                         ')' => {
@@ -429,9 +471,7 @@ impl<'a> Lexer<'a> {
 
     fn match_word(&mut self) {
         while let Some((escape_ch, _)) = self.escape() {
-            if matches!(escape_ch,'a'..='z'|'A'..='Z'|'_' | '\u{0080}'..) {
-                // result.push(escape_ch);
-                // dbg!(escape_ch);
+            if matches!(escape_ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..) {
                 self.advance();
             } else {
                 break;
@@ -452,8 +492,12 @@ impl<'a> Lexer<'a> {
                         }
                     }
                 }
+                let mut count = 0;
 
                 loop {
+                    if count == 6 {
+                        break;
+                    }
                     if let Some(ch) = self.cur_char() {
                         match ch {
                             'a'..='f' | 'A'..='F' | '0'..='9' => {
@@ -463,6 +507,7 @@ impl<'a> Lexer<'a> {
                             _ => break,
                         }
                     }
+                    count += 1;
                 }
                 if let Some(ch) = self.cur_char() {
                     if ch.is_whitespace() {
@@ -495,7 +540,7 @@ impl<'a> Lexer<'a> {
                 self.match_word();
                 let end_pos = self.pos_index;
                 if start_pos == end_pos {
-                    panic!("ident token is empty")
+                    panic!("ident token is empty {}", ch)
                 }
             }
             let end_pos = self.pos_index;
@@ -508,12 +553,15 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     macro_rules! test_token {
         ($x:expr,$y:expr) => {
             let mut lexer = Lexer::new($x);
             let token = lexer.eat_token();
+            dbg!(token.get_source_code(&$x));
             dbg!(&token);
             assert!(token.check_type($y));
         };
@@ -535,13 +583,31 @@ mod tests {
     }
 
     #[test]
+    fn test_ident1_token() {
+        test_token!(
+            r#" -webkit-linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent)"#,
+            TokenType::FunctionToken
+        );
+    }
+
+    #[test]
+    fn test_zero_token() {
+        test_token!(r#"0"#, TokenType::Digital);
+    }
+
+    #[test]
+    fn test_num_token() {
+        test_token!(r#".1"#, TokenType::Digital);
+    }
+
+    #[test]
     fn test_comment_token() {
         test_token!(r#"/** abc */"#, TokenType::Comment);
     }
 
     #[test]
     fn test_func_token() {
-        test_token!(r#"abc("#, TokenType::FunctionToken);
+        test_token!(r#"-abc-sadf("#, TokenType::FunctionToken);
     }
 
     #[test]
@@ -573,7 +639,45 @@ mod tests {
     }
 
     #[test]
+    fn test_plus_token() {
+        test_token!(r#"+.checkbo"#, TokenType::Plus);
+    }
+
+    #[test]
+    fn test_num1_token() {
+        test_token!(r#".123"#, TokenType::Digital);
+    }
+
+    #[test]
     fn test_length_token() {
         test_token!(r#"123px"#, TokenType::Dimension);
+    }
+
+    #[test]
+    fn test_body_token() {
+        test_token!(r#"body"#, TokenType::IdentToken);
+    }
+
+    #[test]
+    fn test_ident2_token() {
+        test_token!(r#"body-color"#, TokenType::IdentToken);
+    }
+
+    #[test]
+    fn test_string2_token() {
+        test_token!(r#""\002a""#, TokenType::Str);
+    }
+
+    #[test]
+    fn test_all_match_token() {
+        test_token!(r#"*="#, TokenType::AllMatch);
+    }
+
+    #[test]
+    fn test_url1_token() {
+        test_token!(
+            r#"url(../fonts\0123/glyphicons-halflings-regular.eot?#iefix)"#,
+            TokenType::UrlToken
+        );
     }
 }

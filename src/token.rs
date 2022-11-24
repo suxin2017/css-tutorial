@@ -10,12 +10,11 @@ pub struct Token(pub TokenType, pub Range);
 
 impl Token {
     pub fn check_type(&self, token_type: TokenType) -> bool {
-        dbg!(self.0 == token_type);
         return self.0 == token_type;
     }
 
     pub fn get_source_code<'a>(&'a self, raw: &'a str) -> &str {
-        &raw[self.1.start_pos_index..self.1.end_pos_index]
+        &raw[self.1.start_pos..self.1.end_pos]
     }
 }
 
@@ -96,7 +95,6 @@ pub enum TokenType {
     Dimension,
     Comment,
     FunctionToken,
-    PercentageToken,
     AtKeywordToken,
     HashToken,
     UrlToken,
@@ -108,7 +106,7 @@ pub enum TokenType {
     Stylesheet,
     Rule,
     Token,
-    Select,
+    Selector,
     ChartSet,
     Import,
     Medium,
@@ -124,6 +122,21 @@ pub enum TokenType {
     Operator,
     RuleList,
     DeclarationList,
+    AtRule,
+    AtRuleParams,
+    ElementName,
+    Star,
+    SimpleSelect,
+    Class,
+    Attrib,
+    Includes,
+    Dashmatch,
+    Equal,
+    Asterisk,
+    MoreThan,
+    Exclude,
+    AllMatch,
+    PercentageToken,
 }
 
 impl Default for TokenType {
