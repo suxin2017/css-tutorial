@@ -49,6 +49,7 @@ impl<'a> Lexer<'a> {
             self.pos_index = pos;
             self.cur_char = Some(ch);
         } else {
+            self.pos_index += 1;
             self.cur_char = None;
         }
     }

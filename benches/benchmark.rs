@@ -71,7 +71,7 @@ fn gener_random_number() -> String {
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("parse 800 line benchmark", |b| {
         b.iter(|| {
-            let binding = fs::read_to_string("test.css").unwrap();
+            let binding = fs::read_to_string("test2.css").unwrap();
             let mut lexer = Lexer::new(&binding);
             let mut builder = AstTreeBuilder::new();
             let mut parser = Parser::new(&mut lexer, &mut builder);
