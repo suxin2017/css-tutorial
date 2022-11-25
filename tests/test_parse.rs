@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::fs;
 
     use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser};
 

@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{
     ast::{AstNode, AstNodeType},
     range::Range,
+    token_type::TokenType,
 };
 
+// ANCHOR: token
 #[derive(Debug, Clone, Copy)]
 pub struct Token(pub TokenType, pub Range);
 
@@ -18,138 +18,13 @@ impl Token {
     }
 }
 
-#[test]
-fn check_token_type() {
-    assert!(Token(TokenType::EOF, Range::default()).check_type(TokenType::EOF))
-}
-
-#[test]
-fn get_source_code() {
-    assert_eq!(
-        Token(TokenType::EOF, Range::new(0, 2)).get_source_code("raw"),
-        "ra"
-    )
-}
+// ANCHOR_END: token
 
 impl From<Token> for AstNode<TokenType> {
     fn from(token: Token) -> Self {
         Self {
             node_type: AstNodeType(token.0),
             range: token.1,
-            children: None,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum TokenType {
-    EOF = 1,
-    /** ;*/
-    Semi,
-    /** . */
-    Dot,
-    /** , */
-    Comma,
-    /** : */
-    Colon,
-    /** ( */
-    LeftParenthesis,
-    /** ) */
-    RightParenthesis,
-
-    /** + */
-    Plus,
-
-    /** - */
-    Minus,
-
-    /** < */
-    LessThan,
-
-    /** @ */
-    At,
-
-    /** [ */
-    LeftSquareBracket,
-
-    /** \ */
-    ReverseSolidus,
-
-    /** ] */
-    RightSquareBracket,
-
-    /** { */
-    LeftCurlyBracket,
-    /**} */
-    RightCurlyBracket,
-
-    /** # */
-    NumberSign,
-
-    /** / */
-    ForwardSlash,
-    KeyWord,
-    Str,
-    Digital,
-    IdentToken,
-    Dimension,
-    Comment,
-    FunctionToken,
-    AtKeywordToken,
-    HashToken,
-    UrlToken,
-    CDOToken,
-    CDCToken,
-    LengthToken,
-
-    // ast node type
-    Stylesheet,
-    Rule,
-    Token,
-    Selector,
-    ChartSet,
-    Import,
-    Medium,
-    Function,
-    Expression,
-    Term,
-    MediumList,
-    Page,
-    Property,
-    Declaration,
-    Important,
-    // '/' or ','
-    Operator,
-    RuleList,
-    DeclarationList,
-    AtRule,
-    AtRuleParams,
-    ElementName,
-    Star,
-    SimpleSelect,
-    Class,
-    Attrib,
-    Includes,
-    Dashmatch,
-    Equal,
-    Asterisk,
-    MoreThan,
-    Exclude,
-    AllMatch,
-    PercentageToken,
-}
-
-impl Default for TokenType {
-    fn default() -> Self {
-        TokenType::EOF
-    }
-}
-
-impl From<TokenType> for AstNode<TokenType> {
-    fn from(token_type: TokenType) -> Self {
-        Self {
-            node_type: AstNodeType(token_type),
-            range: Range::default(),
             children: None,
         }
     }

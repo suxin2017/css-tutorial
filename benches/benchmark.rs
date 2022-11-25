@@ -6,7 +6,7 @@ use std::{
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser, token::TokenType};
+use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser, token_type::TokenType};
 use rand::Rng;
 
 fn fibonacci(n: u64) -> u64 {
@@ -70,8 +70,9 @@ fn gener_random_number() -> String {
 }
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("parse 800 line benchmark", |b| {
+        let binding = fs::read_to_string("test.css").unwrap();
+
         b.iter(|| {
-            let binding = fs::read_to_string("test2.css").unwrap();
             let mut lexer = Lexer::new(&binding);
             let mut builder = AstTreeBuilder::new();
             let mut parser = Parser::new(&mut lexer, &mut builder);

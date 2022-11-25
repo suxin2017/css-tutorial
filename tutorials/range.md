@@ -10,13 +10,51 @@
 {{#include ../src/range.rs:range}}
 ```
 
-然后我们实现 Display 方法，这个方法类似于 js 的 `toString`，用于打印输出，只不过在 rust 的世界里面充分体现面向特征（类似接口）编程。
+这里通过 `#[dirvie]` 进行包裹的是 rust 的指令宏，这里简单介绍下 rust 的宏。
 
-```rust,no_run,noplayground
-{{#include ../src/range.rs:display}}
+```rust
+macro_rules! say_hello {
+    (console.log("hello world")) => {
+        println!("hello world");
+    };
+}
+
+fn main(){
+  say_hello!(console.log("hello world"));
+}
+
 ```
 
-接下来我们实现一下移动范围的一些方法。
+点击左上角的运行按钮，你会发现这代码竟然能运行，我很简单的就实现了一个一个 js 解释器。
+
+他的魔法在于在编译期将你的代码进行了替换，可以在 rust playground 中看下他的宏展开。
+
+你会发现你的代码被替换成下面这种，这种编译器做的拦截对运行时毫无影响。
+
+```rust,no_run,noplayground
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2021::*;
+#[macro_use]
+extern crate std;
+macro_rules! say_hello {
+    (console.log("hello world")) => { println! ("hello world") ; } ;
+}
+
+fn main() {
+    {
+        ::std::io::_print(::core::fmt::Arguments::new_v1(&["hello world\n"],
+                &[]));
+    };
+    ;
+}
+```
+
+相比于 js 的拦截器的实现高出很多。有点类似 svelte 的原理。
+
+当然 rust 的宏并不是完美的，它带来的代价就是增加包体积，代码编译慢。
+
+接下来，为`Range`添加 new 的创建方法
 
 ```rust,no_run,noplayground
 {{#include ../src/range.rs:impl}}

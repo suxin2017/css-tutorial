@@ -2,7 +2,8 @@ use std::backtrace::Backtrace;
 
 use crate::ast::AstTreeBuilder;
 use crate::lexer::Lexer;
-use crate::token::{Token, TokenType};
+use crate::token::Token;
+use crate::token_type::TokenType;
 
 const CHARSET_SYM: &str = "@charset";
 const IMPORT_SYM: &str = "@import";
@@ -49,18 +50,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn check_token_type(&mut self, token_type: TokenType) -> bool {
-        if !self.lexer.get_peek_token().unwrap().check_type(token_type) {
-            // let token = self.lexer.get_peek_token().unwrap();
-
-            // let prestr = &self.lexer.source_code[..token.1.start_pos];
-            // let line = prestr.chars().filter(|x| x == &'\n').count();
-            // println!(
-            //     "当前token {:?} 内容 {:?} 期待的token {:?} at line {}",
-            //     token,
-            //     token.get_source_code(&self.lexer.source_code),
-            //     token_type,
-            //     line
-            // );
+        if !self.lexer.check_peek_token_by_type(token_type) {
             return false;
         }
         true

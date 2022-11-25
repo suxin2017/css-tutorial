@@ -1,5 +1,6 @@
-use crate::token::TokenType;
-use crate::token::TokenType::{Comment, HashToken, UrlToken};
+use core::panic;
+
+use crate::token_type::TokenType::{self, HashToken};
 use crate::{range::Range, token::Token};
 
 #[derive(Debug)]
@@ -14,12 +15,17 @@ pub enum ErrorKind {
 // ANCHOR: lexer
 #[derive(Debug)]
 pub struct Lexer<'a> {
+    /** 当前光标位置 */
     pos_index: usize,
+    /** 下一个Token */
     peek_token: Option<Token>,
+    /** 当前字符 */
     cur_char: Option<char>,
-    pub source_code: &'a str,
-    source_code_length: usize,
+    /** 字符切片 */
     chars: std::str::CharIndices<'a>,
+
+    /** 原始输入*/
+    pub source_code: &'a str,
 }
 // ANCHOR_END: lexer
 
@@ -30,7 +36,6 @@ impl<'a> Lexer<'a> {
             pos_index: 0,
             cur_char: None,
             peek_token: None,
-            source_code_length: source_code.len(),
             source_code,
         };
         lexer.advance();
@@ -53,6 +58,61 @@ impl<'a> Lexer<'a> {
             self.cur_char = None;
         }
     }
+
+    pub fn get_peek_token(&mut self) -> Option<Token> {
+        if let None = self.peek_token {
+            self.peek_token = Some(self.get_token());
+        } else {
+            return self.peek_token;
+        }
+        return self.peek_token;
+    }
+
+    pub fn eat_token(&mut self) -> Token {
+        if let Some(peek_token) = self.peek_token {
+            self.peek_token = None;
+            return peek_token;
+        }
+        return self.get_token();
+    }
+
+    pub fn check_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
+        if let Some(token) = self.get_peek_token() {
+            return token.check_type(token_type);
+        }
+        false
+    }
+    //ANCHOR:get_token
+    pub fn get_token(&mut self) -> Token {
+        while let Some(ch) = self.cur_char() {
+            if ch.is_whitespace() {
+                self.advance();
+                continue;
+            }
+            match ch {
+                '(' | ')' | ',' | ':' | ';' | '<' | '>' | '[' | '\\' | ']' | '{' | '}' | '=' => {
+                    return self.parse_simple_symbol(ch)
+                }
+                '/' => return self.try_comment(),
+                '!' => return self.parse_exclamation(),
+                ch @ ('^' | '*' | '~' | '|') => return self.parse_attr_rule(ch),
+                '\'' | '"' => return self.string_token(),
+                '@' => {
+                    return self.parse_at_word();
+                }
+                '#' => return self.parse_hash(),
+                ch if ch.is_ascii_digit() || ch == '.' || ch == '+' || ch == '-' => {
+                    return self.parse_digit_token()
+                }
+                _ => {
+                    return self.parse_ident_token();
+                }
+            }
+        }
+
+        return Token(TokenType::EOF, Range::new(self.pos_index, self.pos_index));
+    }
+    // ANCHOR_END: get_token
 
     pub fn string_token(&mut self) -> Token {
         let mut result = String::new();
@@ -229,191 +289,133 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn get_peek_token(&mut self) -> Option<Token> {
-        if let None = self.peek_token {
-            self.peek_token = Some(self.get_token());
-        } else {
-            return self.peek_token;
+    fn parse_ident_token(&mut self) -> Token {
+        let start_pos = self.pos_index;
+        let mut token = self.ident_token();
+        if let Some(value) = self.parse_url_token(&mut token, start_pos) {
+            return value;
         }
-        return self.peek_token;
+        if matches!(self.cur_char(), Some('(')) {
+            self.advance();
+            let end_pos = self.pos_index;
+            token = Token(TokenType::FunctionToken, Range::new(start_pos, end_pos));
+        };
+        return token;
+    }
+    fn parse_at_word(&mut self) -> Token {
+        let start_pos = self.pos_index;
+        self.advance();
+        if self.check_peek_token_by_type(TokenType::IdentToken) {
+            self.eat_token();
+            let end_pos = self.pos_index;
+            return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
+        }
+        panic!("get at key word error")
     }
 
-    pub fn eat_token(&mut self) -> Token {
-        if let Some(peek_token) = self.peek_token {
-            self.peek_token = None;
-            return peek_token;
-        }
-        return self.get_token();
+    fn parse_hash(&mut self) -> Token {
+        let start_pos = self.pos_index;
+        self.advance();
+        self.match_word();
+        let end_pos = self.pos_index;
+        return Token(HashToken, Range::new(start_pos, end_pos));
     }
 
-    pub fn get_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
-        if let Some(token) = self.get_peek_token() {
-            return token.check_type(token_type);
-        }
-        false
-    }
-    //ANCHOR:get_token
-    pub fn get_token(&mut self) -> Token {
-        while let Some(ch) = self.cur_char() {
-            if ch.is_whitespace() {
+    fn parse_digit_token(&mut self) -> Token {
+        let start_pos = self.pos_index;
+        let mut token = self.try_digit();
+        if token.check_type(TokenType::Digital) {
+            if matches!(self.cur_char(), Some('%')) {
                 self.advance();
-                continue;
-            }
-            match ch {
-                ch @ ('(' | ')' | ',' | ':' | ';' | '<' | '>' | '[' | '\\' | ']' | '{' | '}'
-                | '=') => {
-                    let start_pos = self.pos_index;
-                    // 匹配特殊的的符号
-                    let token_type = match ch {
-                        '(' => TokenType::LeftParenthesis,
-                        ')' => TokenType::RightParenthesis,
-                        ',' => TokenType::Comma,
-                        ':' => TokenType::Colon,
-                        ';' => TokenType::Semi,
-                        '<' => TokenType::LessThan,
-                        '>' => TokenType::MoreThan,
-                        '[' => TokenType::LeftSquareBracket,
-                        '\\' => TokenType::ReverseSolidus,
-                        ']' => TokenType::RightSquareBracket,
-                        '{' => TokenType::LeftCurlyBracket,
-                        '}' => TokenType::RightCurlyBracket,
-                        '=' => TokenType::Equal,
-                        _ => {
-                            panic!("不可能发生")
-                        }
-                    };
+                let end_pos = self.pos_index;
 
-                    self.advance();
-
+                token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
+            } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'))
+            {
+                if self.check_peek_token_by_type(TokenType::IdentToken) {
+                    self.eat_token();
                     let end_pos = self.pos_index;
-                    return Token(token_type, Range::new(start_pos, end_pos));
-                }
-                '/' => return self.try_comment(),
-                '!' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    loop {
-                        if self.get_peek_token_by_type(TokenType::Comment) {
-                            self.eat_token();
-                        } else {
-                            break;
-                        }
-                    }
-                    if self.get_peek_token_by_type(TokenType::IdentToken) {
-                        self.eat_token();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::Important, Range::new(start_pos, end_pos));
-                    } else {
-                        panic!("get at ! important error")
-                    }
-                }
-                '^' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    if matches!(self.cur_char(), Some('=')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::Exclude, Range::new(start_pos, end_pos));
-                    }
-                }
-                '*' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    if matches!(self.cur_char(), Some('=')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::AllMatch, Range::new(start_pos, end_pos));
-                    } else {
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::Asterisk, Range::new(start_pos, end_pos));
-                    }
-                }
-                '~' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    if matches!(self.cur_char(), Some('=')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::Includes, Range::new(start_pos, end_pos));
-                    }
-                }
-                '|' => {
-                    self.advance();
-                    let start_pos = self.pos_index;
-                    if matches!(self.peek_ch(), Some('=')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::Dashmatch, Range::new(start_pos, end_pos));
-                    }
-                }
-                // 获取字符串
-                '\'' | '"' => return self.string_token(),
-                '@' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    if self.get_peek_token_by_type(TokenType::IdentToken) {
-                        self.eat_token();
-                        let end_pos = self.pos_index;
-                        return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
-                    } else {
-                        panic!("get at key word error")
-                    }
-                }
-                '#' => {
-                    let start_pos = self.pos_index;
-                    self.advance();
-                    self.match_word();
-                    let end_pos = self.pos_index;
-                    return Token(HashToken, Range::new(start_pos, end_pos));
-                }
-
-                ch if ch.is_ascii_digit() || ch == '.' || ch == '+' || ch == '-' => {
-                    let start_pos = self.pos_index;
-                    let mut token = self.try_digit();
-                    if token.check_type(TokenType::Digital) {
-                        if matches!(self.cur_char(), Some('%')) {
-                            self.advance();
-                            let end_pos = self.pos_index;
-
-                            token =
-                                Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
-                        } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'))
-                        {
-                            if self.get_peek_token_by_type(TokenType::IdentToken) {
-                                self.eat_token();
-                                let end_pos = self.pos_index;
-                                return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
-                            }
-                        }
-                    }
-                    if token.check_type(TokenType::Minus)
-                        && (self.get_peek_token_by_type(TokenType::IdentToken)
-                            || self.get_peek_token_by_type(TokenType::FunctionToken))
-                    {
-                        let token = self.eat_token();
-                        let end_pos = self.pos_index;
-                        return Token(token.0, Range::new(start_pos, end_pos));
-                    }
-
-                    return token;
-                }
-                _ => {
-                    let start_pos = self.pos_index;
-                    let mut token = self.ident_token();
-                    if let Some(value) = self.parse_url_token(&mut token, start_pos) {
-                        return value;
-                    }
-                    if matches!(self.cur_char(), Some('(')) {
-                        self.advance();
-                        let end_pos = self.pos_index;
-                        token = Token(TokenType::FunctionToken, Range::new(start_pos, end_pos));
-                    };
-                    return token;
+                    return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
                 }
             }
         }
+        if token.check_type(TokenType::Minus)
+            && (self.check_peek_token_by_type(TokenType::IdentToken)
+                || self.check_peek_token_by_type(TokenType::FunctionToken))
+        {
+            let token = self.eat_token();
+            let end_pos = self.pos_index;
+            return Token(token.0, Range::new(start_pos, end_pos));
+        }
+        return token;
+    }
 
-        return Token(TokenType::EOF, Range::new(self.pos_index, self.pos_index));
+    fn parse_attr_rule(&mut self, ch: char) -> Token {
+        let start_pos = self.pos_index;
+        self.advance();
+        if matches!(self.cur_char(), Some('=')) {
+            self.advance();
+            let end_pos = self.pos_index;
+
+            if ch == '^' {
+                return Token(TokenType::Exclude, Range::new(start_pos, end_pos));
+            } else if ch == '*' {
+                return Token(TokenType::AllMatch, Range::new(start_pos, end_pos));
+            } else if ch == '~' {
+                return Token(TokenType::Includes, Range::new(start_pos, end_pos));
+            } else {
+                return Token(TokenType::Dashmatch, Range::new(start_pos, end_pos));
+            }
+        }
+        if ch == '*' {
+            let end_pos = self.pos_index;
+            return Token(TokenType::Asterisk, Range::new(start_pos, end_pos));
+        }
+
+        panic!("parse attr rule error")
+    }
+
+    fn parse_exclamation(&mut self) -> Token {
+        let start_pos = self.pos_index;
+        self.advance();
+        loop {
+            if self.check_peek_token_by_type(TokenType::Comment) {
+                self.eat_token();
+            } else {
+                break;
+            }
+        }
+        if self.check_peek_token_by_type(TokenType::IdentToken) {
+            self.eat_token();
+            let end_pos = self.pos_index;
+            return Token(TokenType::Important, Range::new(start_pos, end_pos));
+        }
+        panic!("get at ! important error")
+    }
+
+    fn parse_simple_symbol(&mut self, ch: char) -> Token {
+        let start_pos = self.pos_index;
+        let token_type = match ch {
+            '(' => TokenType::LeftParenthesis,
+            ')' => TokenType::RightParenthesis,
+            ',' => TokenType::Comma,
+            ':' => TokenType::Colon,
+            ';' => TokenType::Semi,
+            '<' => TokenType::LessThan,
+            '>' => TokenType::MoreThan,
+            '[' => TokenType::LeftSquareBracket,
+            '\\' => TokenType::ReverseSolidus,
+            ']' => TokenType::RightSquareBracket,
+            '{' => TokenType::LeftCurlyBracket,
+            '}' => TokenType::RightCurlyBracket,
+            '=' => TokenType::Equal,
+            _ => {
+                panic!("不可能发生")
+            }
+        };
+        self.advance();
+        let end_pos = self.pos_index;
+        return Token(token_type, Range::new(start_pos, end_pos));
     }
 
     fn parse_url_token(&mut self, token: &mut Token, start_pos: usize) -> Option<Token> {
@@ -552,133 +554,4 @@ impl<'a> Lexer<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::fs;
 
-    use super::*;
-
-    macro_rules! test_token {
-        ($x:expr,$y:expr) => {
-            let mut lexer = Lexer::new($x);
-            let token = lexer.eat_token();
-            dbg!(token.get_source_code(&$x));
-            dbg!(&token);
-            assert!(token.check_type($y));
-        };
-    }
-
-    #[test]
-    fn test_comment() {
-        test_token!(
-            r#"/*
-        sadfadf
-        */"#,
-            TokenType::Comment
-        );
-    }
-
-    #[test]
-    fn test_ident_token() {
-        test_token!(r#"abc"#, TokenType::IdentToken);
-    }
-
-    #[test]
-    fn test_ident1_token() {
-        test_token!(
-            r#" -webkit-linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent)"#,
-            TokenType::FunctionToken
-        );
-    }
-
-    #[test]
-    fn test_zero_token() {
-        test_token!(r#"0"#, TokenType::Digital);
-    }
-
-    #[test]
-    fn test_num_token() {
-        test_token!(r#".1"#, TokenType::Digital);
-    }
-
-    #[test]
-    fn test_comment_token() {
-        test_token!(r#"/** abc */"#, TokenType::Comment);
-    }
-
-    #[test]
-    fn test_func_token() {
-        test_token!(r#"-abc-sadf("#, TokenType::FunctionToken);
-    }
-
-    #[test]
-    fn test_at_token() {
-        test_token!(r#"@abc"#, TokenType::AtKeywordToken);
-    }
-
-    #[test]
-    fn test_string_token() {
-        test_token!(r#""abc""#, TokenType::Str);
-    }
-
-    #[test]
-    fn test_url_token() {
-        test_token!(r#" url(links.css)"#, TokenType::UrlToken);
-    }
-
-    #[test]
-    fn test_complexe_url_token() {
-        test_token!(
-            r#" url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='45'%3E%3Cpath d='M10 10h60' stroke='%2300F' stroke-width='5'/%3E%3Cpath d='M10 20h60' stroke='%230F0' stroke-width='5'/%3E%3Cpath d='M10 30h60' stroke='red' stroke-width='5'/%3E%3C/svg%3E")"#,
-            TokenType::UrlToken
-        );
-    }
-
-    #[test]
-    fn test_important_token() {
-        test_token!(r#" ! important"#, TokenType::Important);
-    }
-
-    #[test]
-    fn test_plus_token() {
-        test_token!(r#"+.checkbo"#, TokenType::Plus);
-    }
-
-    #[test]
-    fn test_num1_token() {
-        test_token!(r#".123"#, TokenType::Digital);
-    }
-
-    #[test]
-    fn test_length_token() {
-        test_token!(r#"123px"#, TokenType::Dimension);
-    }
-
-    #[test]
-    fn test_body_token() {
-        test_token!(r#"body"#, TokenType::IdentToken);
-    }
-
-    #[test]
-    fn test_ident2_token() {
-        test_token!(r#"body-color"#, TokenType::IdentToken);
-    }
-
-    #[test]
-    fn test_string2_token() {
-        test_token!(r#""\002a""#, TokenType::Str);
-    }
-
-    #[test]
-    fn test_all_match_token() {
-        test_token!(r#"*="#, TokenType::AllMatch);
-    }
-
-    #[test]
-    fn test_url1_token() {
-        test_token!(
-            r#"url(../fonts\0123/glyphicons-halflings-regular.eot?#iefix)"#,
-            TokenType::UrlToken
-        );
-    }
-}
