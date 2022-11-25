@@ -19,8 +19,8 @@
 
 postcss
 
-![postcss benchmark](./image/postcss.png)
+![postcss benchmark](./tutorials/image/postcss.png)
 
 我们的编译器
 
-![rust benchmark](./image/rust.png)
+![rust benchmark](./tutorials/image/rust.png)
