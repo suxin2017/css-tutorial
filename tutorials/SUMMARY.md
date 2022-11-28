@@ -5,5 +5,5 @@
 - [编译常识](./concept.md)
 - [定位](./range.md)
 - [词法解析器](./lexer.md)
-  - [词法Token 定义](./token.md)
-  - [结构体、入口函数](./struct.md)
+  - [词法 Token 定义](./token.md)
+  - [词法解析器开发](./lexer-deveopment.md)

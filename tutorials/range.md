@@ -59,3 +59,7 @@ fn main() {
 ```rust,no_run,noplayground
 {{#include ../src/range.rs:impl}}
 ```
+
+好啦本节就到此结束啦。
+
+后面我们开始介绍词法解析器部分。

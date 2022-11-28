@@ -1,10 +1,13 @@
 use std::fs;
 
-use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser};
+use css_tutorial::{ast::AstTreeBuilder, lexer::Lexer, parser::Parser, token_type::TokenType};
 fn main() {
-    let binding = fs::read_to_string("test.css").unwrap();
+    let binding = fs::read_to_string("test2.css").unwrap();
     let mut lexer = Lexer::new(&binding);
-    let mut builder = AstTreeBuilder::new();
-    let mut parser = Parser::new(&mut lexer, &mut builder);
-    parser.parse();
+    loop {
+        let token = lexer.eat_token();
+        if token.check_type(TokenType::EOF) {
+            break;
+        }
+    }
 }

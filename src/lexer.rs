@@ -30,6 +30,7 @@ pub struct Lexer<'a> {
 // ANCHOR_END: lexer
 
 impl<'a> Lexer<'a> {
+    // ANCHOR: new
     pub fn new(source_code: &'a str) -> Self {
         let mut lexer = Self {
             chars: source_code.char_indices(),
@@ -41,16 +42,20 @@ impl<'a> Lexer<'a> {
         lexer.advance();
         lexer
     }
-
+    //ANCHOR_END: new
+    // ANCHOR:  handle_char
+    // 查看前一个字符
     pub fn peek_ch(&mut self) -> Option<char> {
+        // 思考：有没有什么更好的优化手段？
         self.chars.clone().nth(0).map(|x| x.1)
     }
+    // 查看当前字符
     pub fn cur_char(&mut self) -> Option<char> {
         return self.cur_char;
     }
+    // 移动光标
     pub fn advance(&mut self) {
         if let Some((pos, ch)) = self.chars.next() {
-            // dbg!(pos, ch);
             self.pos_index = pos;
             self.cur_char = Some(ch);
         } else {
@@ -58,6 +63,7 @@ impl<'a> Lexer<'a> {
             self.cur_char = None;
         }
     }
+    // ANCHOR_END:  handle_char
 
     pub fn get_peek_token(&mut self) -> Option<Token> {
         if let None = self.peek_token {
@@ -83,7 +89,7 @@ impl<'a> Lexer<'a> {
         false
     }
     //ANCHOR:get_token
-    pub fn get_token(&mut self) -> Token {
+    fn get_token(&mut self) -> Token {
         while let Some(ch) = self.cur_char() {
             if ch.is_whitespace() {
                 self.advance();
@@ -102,7 +108,7 @@ impl<'a> Lexer<'a> {
                 }
                 '#' => return self.parse_hash(),
                 ch if ch.is_ascii_digit() || ch == '.' || ch == '+' || ch == '-' => {
-                    return self.parse_digit_token()
+                    return self.parse_digit_token();
                 }
                 _ => {
                     return self.parse_ident_token();
@@ -161,6 +167,7 @@ impl<'a> Lexer<'a> {
         panic!("parse string token error")
     }
 
+    // ANCHOR: try_comment
     fn try_comment(&mut self) -> Token {
         if let Some(ch) = self.cur_char() {
             let start_pos = self.pos_index;
@@ -191,7 +198,9 @@ impl<'a> Lexer<'a> {
         }
         panic!("parse comment error")
     }
+    // ANCHOR_END: try_comment
 
+    // ANCHOR:try_digit
     pub fn try_digit(&mut self) -> Token {
         let start_pos = self.pos_index;
         if let Some(ch) = self.cur_char() {
@@ -276,6 +285,7 @@ impl<'a> Lexer<'a> {
         }
         panic!("parse digit error {:?} {:?}", self.cur_char, self.pos_index);
     }
+    //ANCHOR_END:try_digit
 
     pub fn skip_whitespace(&mut self) {
         loop {
@@ -353,6 +363,8 @@ impl<'a> Lexer<'a> {
     fn parse_attr_rule(&mut self, ch: char) -> Token {
         let start_pos = self.pos_index;
         self.advance();
+        let end_pos = self.pos_index;
+
         if matches!(self.cur_char(), Some('=')) {
             self.advance();
             let end_pos = self.pos_index;
@@ -366,13 +378,13 @@ impl<'a> Lexer<'a> {
             } else {
                 return Token(TokenType::Dashmatch, Range::new(start_pos, end_pos));
             }
-        }
-        if ch == '*' {
-            let end_pos = self.pos_index;
+        } else if ch == '*' {
             return Token(TokenType::Asterisk, Range::new(start_pos, end_pos));
+        } else if ch == '~' {
+            return Token(TokenType::Wave, Range::new(start_pos, end_pos));
         }
 
-        panic!("parse attr rule error")
+        panic!("parse attr rule error {}", self.pos_index);
     }
 
     fn parse_exclamation(&mut self) -> Token {
@@ -392,7 +404,7 @@ impl<'a> Lexer<'a> {
         }
         panic!("get at ! important error")
     }
-
+    // ANCHOR: parse_simple_symbol
     fn parse_simple_symbol(&mut self, ch: char) -> Token {
         let start_pos = self.pos_index;
         let token_type = match ch {
@@ -417,6 +429,7 @@ impl<'a> Lexer<'a> {
         let end_pos = self.pos_index;
         return Token(token_type, Range::new(start_pos, end_pos));
     }
+    // ANCHOR_END: parse_simple_symbol
 
     fn parse_url_token(&mut self, token: &mut Token, start_pos: usize) -> Option<Token> {
         if token.get_source_code(self.source_code) == "url" {
@@ -553,5 +566,3 @@ impl<'a> Lexer<'a> {
         return Token(TokenType::IdentToken, Range::new(start_pos, end_pos));
     }
 }
-
-

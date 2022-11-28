@@ -29,6 +29,7 @@ pub struct AstTreeBuilder<T: Debug + Default + Serialize> {
     // uszie 标记子数组开始
     pub parent: Vec<(AstNode<T>, usize)>,
     pub children: Vec<AstNode<T>>,
+    pub default: AstNode<T>,
 }
 
 impl<T: Default + Serialize> AstTree<T> {
@@ -55,14 +56,15 @@ impl<T: Debug + Default + Serialize> AstTreeBuilder<T> {
             ast_tree: Default::default(),
             parent: Vec::new(),
             children: Vec::new(),
+            default: AstNode::default(),
         }
     }
 
     pub fn start_node<N: Into<AstNode<T>>>(&mut self, node: N) {
-        self.parent.push((node.into(), self.children.len()))
+        self.parent.push((AstNode::default(), self.children.len()))
     }
     pub fn token<N: Into<AstNode<T>>>(&mut self, node: N) {
-        self.children.push(node.into());
+        self.children.push(AstNode::default());
     }
     pub fn finish_node(&mut self) {
         let (mut parent, last_pos) = self.parent.pop().unwrap();

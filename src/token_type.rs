@@ -63,6 +63,8 @@ pub enum TokenType {
     /* |= */
     Dashmatch,
 
+    /** ~ */
+    Wave,
     /* ~= */
     Includes,
     /* <!-- */

@@ -333,4 +333,21 @@ mod tests {
         println!("serialized = {}", serialized);
         dbg!(builder.ast_tree);
     }
+
+    #[test]
+    fn simple10_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            .glyphicon-chevron-up:before {
+                content: "\e113"
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
 }

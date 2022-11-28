@@ -81,72 +81,11 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
     c.bench_function("lexer 800 line benchmark", |b| {
         b.iter(|| {
-            let binding = fs::read_to_string("test2.css").unwrap();
+            let binding = fs::read_to_string("test.css").unwrap();
             let mut lexer = Lexer::new(&binding);
-            let mut token_list: HashMap<usize, usize> = HashMap::new();
-            loop {
-                let node = lexer.try_digit();
-                if node.check_type(TokenType::EOF) {
-                    break;
-                }
-                lexer.advance();
-            }
-        })
-    });
-    let str = gener_random_ident();
-
-    c.bench_function("p ident", |b| {
-        b.iter(|| {
-            let mut lexer = Lexer::new(&str);
-            let mut token_list: HashMap<usize, usize> = HashMap::new();
             loop {
                 let node = lexer.eat_token();
                 if node.check_type(TokenType::EOF) {
-                    break;
-                }
-            }
-        })
-    });
-
-    let str = gener_random_number();
-
-    c.bench_function("p number", |b| {
-        b.iter(|| {
-            let mut lexer = Lexer::new(&str);
-            let mut token_list: HashMap<usize, usize> = HashMap::new();
-            loop {
-                let node = lexer.eat_token();
-                if node.check_type(TokenType::EOF) {
-                    break;
-                }
-            }
-        })
-    });
-    let mut group = c.benchmark_group("Fibonacci");
-    let i = fs::read_to_string("test2.css").unwrap();
-    group.bench_function("pkk clone", |b| {
-        b.iter(|| {
-            let mut cur_index = 0;
-            let str = i.char_indices();
-            loop {
-                if cur_index < i.len() {
-                    if let Some((_, cur_char)) = i.char_indices().clone().nth(cur_index) {
-                        cur_index += 1;
-                    } else {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-        })
-    });
-    group.bench_function("pkk next", |b| {
-        b.iter(|| {
-            let mut str = i.char_indices();
-            loop {
-                if let Some((_, cur_char)) = str.next() {
-                } else {
                     break;
                 }
             }

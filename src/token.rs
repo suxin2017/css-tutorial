@@ -20,6 +20,20 @@ impl Token {
 
 // ANCHOR_END: token
 
+impl Token {
+    pub fn print_detail(&self, raw: &str) {
+        let prestr = &raw[..self.1.start_pos];
+        let line = prestr.chars().filter(|x| x == &'\n').count();
+        println!(
+            "当前token {:?} 内容 {:?} 期待的token {:?} at line {}",
+            self,
+            self.get_source_code(&raw),
+            self,
+            line
+        );
+    }
+}
+
 impl From<Token> for AstNode<TokenType> {
     fn from(token: Token) -> Self {
         Self {

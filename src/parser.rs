@@ -119,7 +119,9 @@ impl<'a> Parser<'a> {
 
             self.parse_simple_select();
 
-            if self.check_token_type(TokenType::Plus) || self.check_token_type(TokenType::MoreThan)
+            if self.check_token_type(TokenType::Plus)
+                || self.check_token_type(TokenType::MoreThan)
+                || self.check_token_type(TokenType::Wave)
             {
                 self.advance();
             }

@@ -3,6 +3,7 @@ mod test_lexer {
 
     use css_tutorial::{lexer::Lexer, token_type::TokenType};
 
+    //ANCHOR:test_token
     macro_rules! test_token {
         ($x:expr,$y:expr) => {
             let mut lexer = Lexer::new($x);
@@ -12,7 +13,14 @@ mod test_lexer {
             assert!(token.check_type($y));
         };
     }
+    //ANCHOR_END:test_token
 
+    // ANCHOR:lexer_test_example
+
+    #[test]
+    fn test_simple_symbol() {
+        test_token!(r#"("#, TokenType::LeftParenthesis);
+    }
     #[test]
     fn test_comment() {
         test_token!(
@@ -21,6 +29,17 @@ mod test_lexer {
         */"#,
             TokenType::Comment
         );
+    }
+
+    #[test]
+    fn test_num_token() {
+        test_token!(r#".1"#, TokenType::Digital);
+    }
+    // ANCHOR_END:lexer_test_example
+
+    #[test]
+    fn test_comment_token() {
+        test_token!(r#"/** abc */"#, TokenType::Comment);
     }
 
     #[test]
@@ -39,16 +58,6 @@ mod test_lexer {
     #[test]
     fn test_zero_token() {
         test_token!(r#"0"#, TokenType::Digital);
-    }
-
-    #[test]
-    fn test_num_token() {
-        test_token!(r#".1"#, TokenType::Digital);
-    }
-
-    #[test]
-    fn test_comment_token() {
-        test_token!(r#"/** abc */"#, TokenType::Comment);
     }
 
     #[test]
@@ -125,5 +134,20 @@ mod test_lexer {
             r#"url(../fonts\0123/glyphicons-halflings-regular.eot?#iefix)"#,
             TokenType::UrlToken
         );
+    }
+
+    #[test]
+    fn test_simple_lexer() {
+        let source = r#".embed-responsive-16by9 {
+            padding-bottom: 56.25%
+    }
+        "#;
+        let mut lexer = Lexer::new(source);
+        loop {
+            let token = lexer.eat_token();
+            if token.check_type(TokenType::EOF) {
+                break;
+            }
+        }
     }
 }
