@@ -96,6 +96,15 @@ impl<'a> Parser<'a> {
 
     pub fn parse_rule(&mut self) {
         self.builder.start_node(TokenType::RuleList);
+
+        self.parse_selector_list();
+
+        self.parse_declaration_list();
+
+        self.builder.finish_node();
+    }
+
+    pub fn parse_selector_list(&mut self) {
         self.parse_selector();
         loop {
             if self.check_token_type(TokenType::Comma) {
@@ -106,16 +115,13 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-
-        self.parse_declaration_list();
-
-        self.builder.finish_node();
     }
 
     pub fn parse_selector(&mut self) {
         loop {
             if self.check_token_type(TokenType::EOF)
                 || self.check_token_type(TokenType::LeftCurlyBracket)
+                || self.check_token_type(TokenType::RightParenthesis)
                 || self.check_token_type(TokenType::Comma)
             {
                 break;
@@ -483,10 +489,8 @@ impl<'a> Parser<'a> {
 
                     self.check_token_and_advance(TokenType::FunctionToken);
 
-                    if (self.check_token_type(TokenType::Dimension)) {
-                        self.advance();
-                    }
-                    self.parse_simple_select();
+                    self.parse_expr();
+                    self.parse_selector_list();
                     self.check_token_and_advance(TokenType::RightParenthesis);
 
                     self.builder.finish_node();

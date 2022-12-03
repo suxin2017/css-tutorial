@@ -403,4 +403,53 @@ mod tests {
         println!("serialized = {}", serialized);
         dbg!(builder.ast_tree);
     }
+    #[test]
+    fn simple14_test() {
+        let mut lexer = Lexer::new(
+            r#"
+         
+    p:not(.irrelevant) {
+        font-weight: bold;
+    }
+    
+    p > strong,
+    p > b.important {
+        color: crimson;
+    }
+    
+    p > :not(strong, b.important) {
+        color: darkmagenta;
+    }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple15_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            p {
+                font-weight: bold;
+            }
+            
+            li:nth-child(-n+3) {
+                border: 2px solid orange;
+                margin-bottom: 1px;
+            }
+            
+            li:nth-child(even) {
+                background-color: lightyellow;
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
 }
