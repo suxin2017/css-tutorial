@@ -25,10 +25,9 @@ impl Token {
         let prestr = &raw[..self.1.start_pos];
         let line = prestr.chars().filter(|x| x == &'\n').count();
         println!(
-            "当前token {:?} 内容 {:?} 期待的token {:?} at line {}",
+            "当前token {:?} 内容 {:?} at line {}",
             self,
             self.get_source_code(&raw),
-            self,
             line
         );
     }

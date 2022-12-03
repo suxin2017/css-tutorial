@@ -30,7 +30,20 @@ impl<'a> Parser<'a> {
     }
     // ANCHOR: lexer_wrapper
     pub fn peek(&mut self) -> Option<Token> {
-        self.lexer.get_peek_token()
+        let mut token = self.lexer.get_peek_token();
+        loop {
+            if let Some(node) = token {
+                if node.check_type(TokenType::Comment) {
+                    self.advance();
+                    token = self.lexer.get_peek_token();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        return token;
     }
     pub fn advance(&mut self) {
         let node = self.lexer.eat_token();
@@ -55,8 +68,9 @@ impl<'a> Parser<'a> {
     }
 
     pub fn check_token_type(&mut self, token_type: TokenType) -> bool {
-        if !self.lexer.check_peek_token_by_type(token_type) {
-            return false;
+        dbg!(token_type);
+        if let Some(token) = self.peek() {
+            return token.check_type(token_type);
         }
         true
     }
@@ -74,12 +88,11 @@ impl<'a> Parser<'a> {
             match token_type {
                 TokenType::AtKeywordToken => {
                     self.parse_at_rule();
-                }
-                TokenType::Comment => {
-                    self.parse_comment();
+                    return;
                 }
                 TokenType::CDCToken | TokenType::CDOToken => {
                     self.advance();
+                    return;
                 }
                 TokenType::EOF => {
                     self.builder.finish_node();
@@ -91,9 +104,6 @@ impl<'a> Parser<'a> {
         }
     }
     // ANCHOR_END: entry
-    pub fn parse_comment(&mut self) {
-        self.check_token_and_advance(TokenType::Comment);
-    }
 
     pub fn parse_rule(&mut self) {
         self.builder.start_node(TokenType::RuleList);

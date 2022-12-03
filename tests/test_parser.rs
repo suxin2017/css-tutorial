@@ -49,8 +49,7 @@ mod tests {
         );
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
-        parser.parse_comment();
-        builder.finish();
+        parser.parse();
         dbg!(builder.ast_tree);
     }
 
@@ -491,6 +490,25 @@ mod tests {
                 50% {
                     text-decoration-line: underline
                 }
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple18_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            code {
+                background-color: #666666;
+                border-radius: 5px;
+            
+                /* Force background to be printed in Chrome */
+                -webkit-print-color-adjust: exact;
             }
             "#,
         );
