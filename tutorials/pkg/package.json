@@ -1,0 +1,12 @@
+{
+  "name": "css-tutorial",
+  "version": "0.1.0",
+  "files": [
+    "css_tutorial_bg.wasm",
+    "css_tutorial.js",
+    "css_tutorial.d.ts"
+  ],
+  "module": "css_tutorial.js",
+  "types": "css_tutorial.d.ts",
+  "sideEffects": false
+}
