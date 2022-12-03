@@ -523,7 +523,7 @@ mod tests {
         let mut lexer = Lexer::new(
             r#"
           .flex-item {
-                flex-basis: calc(8% - (var(--su0) * 0.1)
+                flex-basis: calc(8% -(var(--su0) * 0.1)
             );
               }
             "#,

@@ -177,8 +177,7 @@ mod test_lexer {
 
     #[test]
     fn test_simple1_lexer() {
-        let source = r#"  - (var(--su0) * 0.1)
-       
+        let source = r#"-(var(--su0)
         "#;
         let mut lexer = Lexer::new(source);
         loop {

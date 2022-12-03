@@ -350,7 +350,7 @@ impl<'a> Lexer<'a> {
         }
         if token.check_type(TokenType::Minus) {
             if let Some(ch) = self.cur_char() {
-                if !ch.is_whitespace() {
+                if !ch.is_whitespace() && self.check_ch(ch) {
                     if self.check_peek_token_by_type(TokenType::IdentToken)
                         || self.check_peek_token_by_type(TokenType::FunctionToken)
                     {
@@ -488,10 +488,13 @@ impl<'a> Lexer<'a> {
     }
     //ANCHOR_END: get_token
 
+    fn check_ch(&self, ch: char) -> bool {
+        return matches!(ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..);
+    }
     fn match_word(&mut self) {
         while let Some((escape_ch, is_escape)) = self.escape() {
             if is_escape {
-            } else if matches!(escape_ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..) {
+            } else if self.check_ch(escape_ch) {
                 self.advance();
             } else {
                 break;
