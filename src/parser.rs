@@ -14,6 +14,7 @@ const MEDIA_SYM: &str = "@media";
 const FONT_FACE_SYM: &str = "@font-face";
 const KEY_FRAMES: &str = "@keyframes";
 const W_KEY_FRAMES: &str = "@-webkit-keyframes";
+const M_KEY_FRAMES: &str = "@-moz-keyframes";
 const O_KEY_FRAMES: &str = "@-o-keyframes";
 const SUPPORTS: &str = "@supports";
 
@@ -251,9 +252,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_declaration(&mut self) {
-        if self.check_token_type(TokenType::IdentToken) {
+        if self.check_token_type(TokenType::IdentToken)
+            || self.check_token_type(TokenType::Asterisk)
+        {
             self.builder.start_node(TokenType::Declaration);
-
             self.parse_property();
 
             self.check_token_and_advance(TokenType::Colon);
@@ -266,7 +268,12 @@ impl<'a> Parser<'a> {
 
     pub fn parse_property(&mut self) {
         self.builder.start_node(TokenType::Property);
+        //兼容ie
+        if self.check_token_type(TokenType::Asterisk) {
+            self.advance();
+        }
         self.check_token_and_advance(TokenType::IdentToken);
+
         self.builder.finish_node();
     }
 
@@ -393,6 +400,7 @@ impl<'a> Parser<'a> {
                 || self.token_eq_str(&token, KEY_FRAMES)
                 || self.token_eq_str(&token, W_KEY_FRAMES)
                 || self.token_eq_str(&token, O_KEY_FRAMES)
+                || self.token_eq_str(&token, M_KEY_FRAMES)
                 || self.token_eq_str(&token, SUPPORTS)
             {
                 self.parse_nest_at_rule();

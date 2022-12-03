@@ -533,4 +533,43 @@ mod tests {
         parser.parse();
         dbg!(builder.ast_tree);
     }
+
+    #[test]
+    fn simple20_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            .b-loading a,
+            .b-loading span {
+              display: inline-block;
+              *display: inline;
+              *zoom: 1;
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
+    #[test]
+    fn simple21_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @-moz-keyframes bili-avatar {
+                0% {
+                  -moz-transform: translateZ(0);
+                  transform: translateZ(0);
+                }
+                to {
+                  -moz-transform: translate3d(-97.5%, 0, 0);
+                  transform: translate3d(-97.5%, 0, 0);
+                }
+              }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
 }
