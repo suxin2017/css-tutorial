@@ -5,7 +5,7 @@ rust 使用 wasm
 具体教程可以看这篇文章[https://rustwasm.github.io/docs/wasm-pack/](https://rustwasm.github.io/docs/wasm-pack/)
 
 ```
-wasm-pack build
+ wasm-pack build --release --target web --out-dir tutorials/pkg
 ```
 
 ```

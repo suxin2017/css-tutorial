@@ -315,12 +315,11 @@ impl<'a> Lexer<'a> {
     fn parse_at_word(&mut self) -> Token {
         let start_pos = self.pos_index;
         self.advance();
-        if self.check_peek_token_by_type(TokenType::IdentToken) {
-            self.eat_token();
-            let end_pos = self.pos_index;
-            return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
-        }
-        panic!("get at key word error")
+
+        self.ident_token();
+
+        let end_pos = self.pos_index;
+        return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
     }
 
     fn parse_hash(&mut self) -> Token {

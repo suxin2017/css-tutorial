@@ -452,4 +452,51 @@ mod tests {
         parser.parse();
         dbg!(builder.ast_tree);
     }
+
+    #[test]
+    fn simple16_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @media(prefers-reduced-motion:reduce) {
+                html {
+                    scroll-behavior: auto
+                }
+            
+                *,:after,:before {
+                    -webkit-animation-duration: .01ms!important;
+                    animation-duration: .01ms!important;
+                    -webkit-animation-iteration-count: 1!important;
+                    animation-iteration-count: 1!important;
+                    scroll-behavior: auto!important;
+                    transition-duration: .01ms!important
+                }
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple17_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @-webkit-keyframes blink {
+                0%,to {
+                    text-decoration-line: none
+                }
+            
+                50% {
+                    text-decoration-line: underline
+                }
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
 }

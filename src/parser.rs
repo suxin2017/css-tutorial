@@ -34,6 +34,7 @@ impl<'a> Parser<'a> {
     }
     pub fn advance(&mut self) {
         let node = self.lexer.eat_token();
+        // self.peek().unwrap().print_detail(self.lexer.source_code);
         self.builder.token(node);
     }
 
@@ -415,7 +416,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_hash(&mut self) {
         loop {
-            if self.check_token_type(TokenType::HashToken) {
+            if self.check_token_type(TokenType::HashToken)
+                || self.check_token_type(TokenType::PercentageToken)
+            {
                 self.advance();
             } else {
                 break;
