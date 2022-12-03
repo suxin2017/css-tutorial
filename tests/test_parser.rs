@@ -283,6 +283,7 @@ mod tests {
         dbg!(builder.ast_tree);
     }
 
+    //ANCHOR:exapmle
     #[test]
     fn simple7_test() {
         let mut lexer = Lexer::new(
@@ -297,12 +298,12 @@ mod tests {
         );
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
-        parser.parse_rule();
+        parser.parse();
         let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
         println!("serialized = {}", serialized);
         dbg!(builder.ast_tree);
     }
-
+    //ANCHOR_END:exapmle
     #[test]
     fn simple8_test() {
         let mut lexer = Lexer::new(

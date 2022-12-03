@@ -340,7 +340,7 @@ impl<'a> Lexer<'a> {
                 let end_pos = self.pos_index;
 
                 token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
-            } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'))
+            } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'|'}'))
             {
                 if self.check_peek_token_by_type(TokenType::IdentToken) {
                     self.eat_token();

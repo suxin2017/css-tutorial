@@ -109,6 +109,11 @@ mod test_lexer {
     }
 
     #[test]
+    fn test_number2_token() {
+        test_token!(r#"123}"#, TokenType::Digital);
+    }
+
+    #[test]
     fn test_body_token() {
         test_token!(r#"body"#, TokenType::IdentToken);
     }

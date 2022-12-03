@@ -15,17 +15,19 @@ const KEY_FRAMES: &str = "@keyframes";
 const W_KEY_FRAMES: &str = "@-webkit-keyframes";
 const O_KEY_FRAMES: &str = "@-o-keyframes";
 
+// ANCHOR: parser
 #[derive(Debug)]
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
     builder: &'a mut AstTreeBuilder<TokenType>,
 }
+// ANCHOR_END: parser
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>, builder: &'a mut AstTreeBuilder<TokenType>) -> Self {
         Self { lexer, builder }
     }
-
+    // ANCHOR: lexer_wrapper
     pub fn peek(&mut self) -> Option<Token> {
         self.lexer.get_peek_token()
     }
@@ -60,7 +62,8 @@ impl<'a> Parser<'a> {
         let ident_str = token.get_source_code(self.lexer.source_code);
         ident_str.eq_ignore_ascii_case(str)
     }
-
+    //ANCHOR_END:lexer_wrapper
+    // ANCHOR: entry
     pub fn parse(mut self) {
         self.builder.start_node(TokenType::Stylesheet);
         while let Some(token) = self.peek() {
@@ -84,7 +87,7 @@ impl<'a> Parser<'a> {
             }
         }
     }
-
+    // ANCHOR_END: entry
     pub fn parse_comment(&mut self) {
         self.check_token_and_advance(TokenType::Comment);
     }
