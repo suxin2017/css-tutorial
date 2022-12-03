@@ -517,4 +517,20 @@ mod tests {
         parser.parse();
         dbg!(builder.ast_tree);
     }
+
+    #[test]
+    fn simple19_test() {
+        let mut lexer = Lexer::new(
+            r#"
+          .flex-item {
+                flex-basis: calc(8% - (var(--su0) * 0.1)
+            );
+              }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
 }

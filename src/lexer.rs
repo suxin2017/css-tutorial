@@ -79,7 +79,8 @@ impl<'a> Lexer<'a> {
             self.peek_token = None;
             return peek_token;
         }
-        return self.get_token();
+        let token = self.get_token();
+        return token;
     }
 
     pub fn check_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
@@ -181,7 +182,6 @@ impl<'a> Lexer<'a> {
                         if ch == '*' && matches!(self.peek_ch(), Some('/')) {
                             self.advance();
                             self.advance();
-                            // dbg!(ch, self.peek_ch(), self.cur_char);
 
                             let end_pos = self.pos_index;
                             return Token(TokenType::Comment, Range::new(start_pos, end_pos));
@@ -348,13 +348,18 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-        if token.check_type(TokenType::Minus)
-            && (self.check_peek_token_by_type(TokenType::IdentToken)
-                || self.check_peek_token_by_type(TokenType::FunctionToken))
-        {
-            let token = self.eat_token();
-            let end_pos = self.pos_index;
-            return Token(token.0, Range::new(start_pos, end_pos));
+        if token.check_type(TokenType::Minus) {
+            if let Some(ch) = self.cur_char() {
+                if !ch.is_whitespace() {
+                    if self.check_peek_token_by_type(TokenType::IdentToken)
+                        || self.check_peek_token_by_type(TokenType::FunctionToken)
+                    {
+                        let token = self.eat_token();
+                        let end_pos = self.pos_index;
+                        return Token(token.0, Range::new(start_pos, end_pos));
+                    }
+                }
+            }
         }
         return token;
     }

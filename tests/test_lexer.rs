@@ -56,6 +56,10 @@ mod test_lexer {
     fn test_ident5_token() {
         test_token!(r#" min-w-\[75\%\] "#, TokenType::IdentToken);
     }
+    #[test]
+    fn test_ident6_token() {
+        test_token!(r#" min-w-\[75\%\] "#, TokenType::IdentToken);
+    }
 
     #[test]
     fn test_ident3_token() {
@@ -165,6 +169,21 @@ mod test_lexer {
         let mut lexer = Lexer::new(source);
         loop {
             let token = lexer.eat_token();
+            if token.check_type(TokenType::EOF) {
+                break;
+            }
+        }
+    }
+
+    #[test]
+    fn test_simple1_lexer() {
+        let source = r#"  - (var(--su0) * 0.1)
+       
+        "#;
+        let mut lexer = Lexer::new(source);
+        loop {
+            let token = lexer.eat_token();
+            dbg!(token);
             if token.check_type(TokenType::EOF) {
                 break;
             }

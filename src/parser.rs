@@ -1,4 +1,5 @@
 use std::backtrace::Backtrace;
+use std::fs::DirBuilder;
 
 use crate::ast::AstTreeBuilder;
 use crate::lexer::Lexer;
@@ -36,6 +37,7 @@ impl<'a> Parser<'a> {
                 if node.check_type(TokenType::Comment) {
                     self.advance();
                     token = self.lexer.get_peek_token();
+                    // token.unwrap().print_detail(self.lexer.source_code);
                 } else {
                     break;
                 }
@@ -49,6 +51,7 @@ impl<'a> Parser<'a> {
     }
     pub fn advance(&mut self) {
         let node = self.lexer.eat_token();
+        // dbg!(node);
         // self.peek().unwrap().print_detail(self.lexer.source_code);
         self.builder.token(node);
     }
@@ -279,7 +282,6 @@ impl<'a> Parser<'a> {
                 self.advance();
                 self.builder.finish_node();
             }
-
             if !self.parse_term() {
                 break;
             };
@@ -289,7 +291,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_term(&mut self) -> bool {
-        // todo: add hexcolor and number 系列
         if let Some(token) = self.peek() {
             match token.0 {
                 TokenType::Digital
@@ -306,7 +307,6 @@ impl<'a> Parser<'a> {
                 | TokenType::ForwardSlash
                 | TokenType::PercentageToken => {
                     self.builder.start_node(TokenType::Term);
-
                     self.advance();
                     self.builder.finish_node();
                     return true;
@@ -334,6 +334,7 @@ impl<'a> Parser<'a> {
                             break;
                         }
                     }
+                    return true;
                 }
                 _ => {}
             }

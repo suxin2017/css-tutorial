@@ -25,7 +25,7 @@ pub enum TokenType {
     /** + */
     Plus,
 
-    /** - */
+    /** '-' */
     Minus,
 
     /** < */
