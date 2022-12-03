@@ -351,4 +351,56 @@ mod tests {
         println!("serialized = {}", serialized);
         dbg!(builder.ast_tree);
     }
+
+    #[test]
+    fn simple11_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @supports (-webkit-overflow-scrolling:touch) {
+                .wp-block-cover-image.has-parallax,.wp-block-cover.has-parallax {
+                    background-attachment: scroll
+                }
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_at_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple12_test() {
+        let mut lexer = Lexer::new(
+            r#"
+          
+                 calc((100% - 16px)/ 2)
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_function();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple13_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            .wp-block-gallery.columns-1 .blocks-gallery-image:nth-of-type(1n),.wp-block-gallery.columns-1 .blocks-gallery-item:nth-of-type(1n) {
+                margin-right: 0
+            }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse_rule();
+        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
+        println!("serialized = {}", serialized);
+        dbg!(builder.ast_tree);
+    }
 }

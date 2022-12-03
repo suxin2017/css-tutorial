@@ -14,6 +14,7 @@ const FONT_FACE_SYM: &str = "@font-face";
 const KEY_FRAMES: &str = "@keyframes";
 const W_KEY_FRAMES: &str = "@-webkit-keyframes";
 const O_KEY_FRAMES: &str = "@-o-keyframes";
+const SUPPORTS: &str = "@supports";
 
 // ANCHOR: parser
 #[derive(Debug)]
@@ -43,6 +44,7 @@ impl<'a> Parser<'a> {
 
     pub fn check_token(&mut self, token_type: TokenType) {
         if !self.check_token_type(token_type) {
+            self.peek().unwrap().print_detail(&self.lexer.source_code);
             panic!(
                 "expect token type is {:?} but get token type {:?}",
                 token_type,
@@ -276,6 +278,9 @@ impl<'a> Parser<'a> {
                 | TokenType::Colon
                 | TokenType::HashToken
                 | TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Asterisk
+                | TokenType::ForwardSlash
                 | TokenType::PercentageToken => {
                     self.builder.start_node(TokenType::Term);
 
@@ -288,6 +293,24 @@ impl<'a> Parser<'a> {
                     self.parse_function();
                     self.builder.finish_node();
                     return true;
+                }
+                TokenType::LeftParenthesis => {
+                    self.advance();
+                    loop {
+                        if let Some(token) = self.peek() {
+                            match token.0 {
+                                TokenType::RightParenthesis => {
+                                    self.advance();
+                                    break;
+                                }
+                                _ => {
+                                    self.parse_term();
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -350,6 +373,7 @@ impl<'a> Parser<'a> {
                 || self.token_eq_str(&token, KEY_FRAMES)
                 || self.token_eq_str(&token, W_KEY_FRAMES)
                 || self.token_eq_str(&token, O_KEY_FRAMES)
+                || self.token_eq_str(&token, SUPPORTS)
             {
                 self.parse_nest_at_rule();
             } else {
@@ -459,6 +483,9 @@ impl<'a> Parser<'a> {
 
                     self.check_token_and_advance(TokenType::FunctionToken);
 
+                    if (self.check_token_type(TokenType::Dimension)) {
+                        self.advance();
+                    }
                     self.parse_simple_select();
                     self.check_token_and_advance(TokenType::RightParenthesis);
 
