@@ -356,7 +356,7 @@ mod tests {
         let mut lexer = Lexer::new(
             r#"
             @supports (-webkit-overflow-scrolling:touch) {
-                .wp-block-cover-image.has-parallax,.wp-block-cover.has-parallax {
+                has-parallax {
                     background-attachment: scroll
                 }
             }
@@ -364,7 +364,7 @@ mod tests {
         );
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
-        parser.parse_at_rule();
+        parser.parse();
         let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
         println!("serialized = {}", serialized);
         dbg!(builder.ast_tree);
@@ -503,8 +503,13 @@ mod tests {
     fn simple18_test() {
         let mut lexer = Lexer::new(
             r#"
-            main{
-                /*! Extensions from @primer/css/alerts/flash.scss */--color-social-reaction-bg-hover:var(--color-scale-gray-7);--color-social-reaction-bg-reacted-hover:var(--color-scale-blue-8)}main .pagination-loader-container{background-image:url(https://github.com/images/modules/pulls/progressive-disclosure-line-dark.svg)}main .gsc-loading-image{background-image:url(https://github.githubassets.com/images/mona-loading-dark.gif)}}
+            /*! tailwindcss v3.2.4 | MIT License | https://tailwindcss.com*/
+            *,
+            :after,
+            :before {
+              border: 0 solid #e5e7eb;
+              box-sizing: border-box;
+            }
             "#,
         );
         let mut builder = AstTreeBuilder::new();

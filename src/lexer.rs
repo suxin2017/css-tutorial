@@ -96,7 +96,7 @@ impl<'a> Lexer<'a> {
                 continue;
             }
             match ch {
-                '(' | ')' | ',' | ':' | ';' | '<' | '>' | '[' | '\\' | ']' | '{' | '}' | '=' => {
+                '(' | ')' | ',' | ':' | ';' | '<' | '>' | '[' | ']' | '{' | '}' | '=' => {
                     return self.parse_simple_symbol(ch)
                 }
                 '/' => return self.try_comment(),
@@ -415,7 +415,6 @@ impl<'a> Lexer<'a> {
             '<' => TokenType::LessThan,
             '>' => TokenType::MoreThan,
             '[' => TokenType::LeftSquareBracket,
-            '\\' => TokenType::ReverseSolidus,
             ']' => TokenType::RightSquareBracket,
             '{' => TokenType::LeftCurlyBracket,
             '}' => TokenType::RightCurlyBracket,
@@ -485,8 +484,9 @@ impl<'a> Lexer<'a> {
     //ANCHOR_END: get_token
 
     fn match_word(&mut self) {
-        while let Some((escape_ch, _)) = self.escape() {
-            if matches!(escape_ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..) {
+        while let Some((escape_ch, is_escape)) = self.escape() {
+            if is_escape {
+            } else if matches!(escape_ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..) {
                 self.advance();
             } else {
                 break;

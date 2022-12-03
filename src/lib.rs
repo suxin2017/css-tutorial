@@ -14,7 +14,7 @@ use wasm_bindgen::prelude::*;
 pub fn parse(input: String) -> String {
     let mut lexer = Lexer::new(&input);
     let mut builder = AstTreeBuilder::new();
-    let parser = Parser::new(&mut lexer, &mut builder);
+    let mut parser = Parser::new(&mut lexer, &mut builder);
     parser.parse();
     let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
     serialized

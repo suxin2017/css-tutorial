@@ -43,6 +43,8 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
+        // token.unwrap().print_detail(self.lexer.source_code);
+
         return token;
     }
     pub fn advance(&mut self) {
@@ -80,22 +82,27 @@ impl<'a> Parser<'a> {
     }
     //ANCHOR_END:lexer_wrapper
     // ANCHOR: entry
-    pub fn parse(mut self) {
+    pub fn parse(&mut self) {
         self.builder.start_node(TokenType::Stylesheet);
+        self.parse_entry();
+        self.builder.finish_node();
+        self.builder.finish();
+    }
+
+    fn parse_entry(&mut self) {
         while let Some(token) = self.peek() {
             let Token(token_type, _) = token;
             match token_type {
                 TokenType::AtKeywordToken => {
                     self.parse_at_rule();
-                    return;
                 }
                 TokenType::CDCToken | TokenType::CDOToken => {
                     self.advance();
-                    return;
                 }
                 TokenType::EOF => {
-                    self.builder.finish_node();
-                    self.builder.finish();
+                    return;
+                }
+                TokenType::RightCurlyBracket => {
                     return;
                 }
                 _ => self.parse_rule(),
@@ -342,12 +349,8 @@ impl<'a> Parser<'a> {
 
     pub fn parse_nest_at_rule(&mut self) {
         self.check_token_and_advance(TokenType::LeftCurlyBracket);
-        loop {
-            if self.check_token_type(TokenType::RightCurlyBracket) {
-                break;
-            }
-            self.parse_rule();
-        }
+
+        self.parse_entry();
 
         self.check_token_and_advance(TokenType::RightCurlyBracket);
     }

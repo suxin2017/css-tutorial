@@ -48,6 +48,21 @@ mod test_lexer {
     }
 
     #[test]
+    fn test_ident4_token() {
+        test_token!(r#" w-\[29px\] "#, TokenType::IdentToken);
+    }
+
+    #[test]
+    fn test_ident5_token() {
+        test_token!(r#" min-w-\[75\%\] "#, TokenType::IdentToken);
+    }
+
+    #[test]
+    fn test_ident3_token() {
+        test_token!(r#"\!abc"#, TokenType::IdentToken);
+    }
+
+    #[test]
     fn test_ident1_token() {
         test_token!(
             r#" -webkit-linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent)"#,
