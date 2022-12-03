@@ -68,7 +68,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn check_token_type(&mut self, token_type: TokenType) -> bool {
-        dbg!(token_type);
         if let Some(token) = self.peek() {
             return token.check_type(token_type);
         }

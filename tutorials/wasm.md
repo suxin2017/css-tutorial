@@ -89,7 +89,9 @@ table col[class*=col-] {
                 console.time("parse")
                  let result = parse(code)
                  console.timeEnd("parse")
+                 
             result = JSON.parse(result);
+            console.log(result)
             let d = dfs(result.root)
             t.innerHTML = d; 
             }catch(e){

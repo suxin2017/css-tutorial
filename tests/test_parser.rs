@@ -503,13 +503,8 @@ mod tests {
     fn simple18_test() {
         let mut lexer = Lexer::new(
             r#"
-            code {
-                background-color: #666666;
-                border-radius: 5px;
-            
-                /* Force background to be printed in Chrome */
-                -webkit-print-color-adjust: exact;
-            }
+            main{
+                /*! Extensions from @primer/css/alerts/flash.scss */--color-social-reaction-bg-hover:var(--color-scale-gray-7);--color-social-reaction-bg-reacted-hover:var(--color-scale-blue-8)}main .pagination-loader-container{background-image:url(https://github.com/images/modules/pulls/progressive-disclosure-line-dark.svg)}main .gsc-loading-image{background-image:url(https://github.githubassets.com/images/mona-loading-dark.gif)}}
             "#,
         );
         let mut builder = AstTreeBuilder::new();
