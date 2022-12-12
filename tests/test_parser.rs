@@ -424,7 +424,6 @@ mod tests {
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
         parser.parse();
-        let serialized = serde_json::to_string(&builder.ast_tree).unwrap();
         dbg!(builder.ast_tree);
     }
 
@@ -564,6 +563,21 @@ mod tests {
                   -moz-transform: translate3d(-97.5%, 0, 0);
                   transform: translate3d(-97.5%, 0, 0);
                 }
+              }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        dbg!(builder.ast_tree);
+    }
+
+    #[test]
+    fn simple22_test() {
+        let mut lexer = Lexer::new(
+            r#"
+            @font-face {
+                font-family: iconfont;
               }
             "#,
         );

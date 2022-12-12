@@ -5,7 +5,7 @@ pub mod range;
 pub mod token;
 pub mod token_type;
 
-use ast::{AstTree, AstTreeBuilder};
+use ast::AstTreeBuilder;
 use lexer::Lexer;
 use parser::Parser;
 use wasm_bindgen::prelude::*;
