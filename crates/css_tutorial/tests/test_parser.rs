@@ -585,21 +585,9 @@ mod tests {
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
         parser.parse();
-        dbg!(builder.ast_tree);
-    }
-
-    #[test]
-    fn simple22_test() {
-        let mut lexer = Lexer::new(
-            r#"
-            @font-face {
-                font-family: iconfont;
-              }
-            "#,
+        test_tool::compart_to_snapshot(
+            serde_json::to_string_pretty(&builder.ast_tree).unwrap(),
+            "simple22_test",
         );
-        let mut builder = AstTreeBuilder::new();
-        let mut parser = Parser::new(&mut lexer, &mut builder);
-        parser.parse();
-        dbg!(builder.ast_tree);
     }
 }

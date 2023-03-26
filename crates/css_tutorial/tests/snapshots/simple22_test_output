@@ -1,0 +1,225 @@
+{
+  "root": {
+    "node_type": "Stylesheet",
+    "range": {
+      "start_pos": 12,
+      "end_pos": 106
+    },
+    "children": [
+      {
+        "node_type": "RuleList",
+        "range": {
+          "start_pos": 12,
+          "end_pos": 106
+        },
+        "children": [
+          {
+            "node_type": "Selector",
+            "range": {
+              "start_pos": 12,
+              "end_pos": 24
+            },
+            "children": [
+              {
+                "node_type": "SimpleSelect",
+                "range": {
+                  "start_pos": 12,
+                  "end_pos": 24
+                },
+                "children": [
+                  {
+                    "node_type": "Class",
+                    "range": {
+                      "start_pos": 12,
+                      "end_pos": 24
+                    },
+                    "children": [
+                      {
+                        "node_type": "Dot",
+                        "range": {
+                          "start_pos": 12,
+                          "end_pos": 13
+                        },
+                        "children": null
+                      },
+                      {
+                        "node_type": "IdentToken",
+                        "range": {
+                          "start_pos": 13,
+                          "end_pos": 24
+                        },
+                        "children": null
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "node_type": "DeclarationList",
+            "range": {
+              "start_pos": 25,
+              "end_pos": 106
+            },
+            "children": [
+              {
+                "node_type": "LeftCurlyBracket",
+                "range": {
+                  "start_pos": 25,
+                  "end_pos": 26
+                },
+                "children": null
+              },
+              {
+                "node_type": "RuleList",
+                "range": {
+                  "start_pos": 42,
+                  "end_pos": 90
+                },
+                "children": [
+                  {
+                    "node_type": "Selector",
+                    "range": {
+                      "start_pos": 42,
+                      "end_pos": 46
+                    },
+                    "children": [
+                      {
+                        "node_type": "SimpleSelect",
+                        "range": {
+                          "start_pos": 42,
+                          "end_pos": 46
+                        },
+                        "children": [
+                          {
+                            "node_type": "Class",
+                            "range": {
+                              "start_pos": 42,
+                              "end_pos": 46
+                            },
+                            "children": [
+                              {
+                                "node_type": "Dot",
+                                "range": {
+                                  "start_pos": 42,
+                                  "end_pos": 43
+                                },
+                                "children": null
+                              },
+                              {
+                                "node_type": "IdentToken",
+                                "range": {
+                                  "start_pos": 43,
+                                  "end_pos": 46
+                                },
+                                "children": null
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "node_type": "DeclarationList",
+                    "range": {
+                      "start_pos": 46,
+                      "end_pos": 90
+                    },
+                    "children": [
+                      {
+                        "node_type": "LeftCurlyBracket",
+                        "range": {
+                          "start_pos": 46,
+                          "end_pos": 47
+                        },
+                        "children": null
+                      },
+                      {
+                        "node_type": "Declaration",
+                        "range": {
+                          "start_pos": 64,
+                          "end_pos": 73
+                        },
+                        "children": [
+                          {
+                            "node_type": "Property",
+                            "range": {
+                              "start_pos": 64,
+                              "end_pos": 69
+                            },
+                            "children": [
+                              {
+                                "node_type": "IdentToken",
+                                "range": {
+                                  "start_pos": 64,
+                                  "end_pos": 69
+                                },
+                                "children": null
+                              }
+                            ]
+                          },
+                          {
+                            "node_type": "Colon",
+                            "range": {
+                              "start_pos": 69,
+                              "end_pos": 70
+                            },
+                            "children": null
+                          },
+                          {
+                            "node_type": "Expression",
+                            "range": {
+                              "start_pos": 70,
+                              "end_pos": 73
+                            },
+                            "children": [
+                              {
+                                "node_type": "Term",
+                                "range": {
+                                  "start_pos": 70,
+                                  "end_pos": 73
+                                },
+                                "children": [
+                                  {
+                                    "node_type": "IdentToken",
+                                    "range": {
+                                      "start_pos": 70,
+                                      "end_pos": 73
+                                    },
+                                    "children": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "node_type": "RightCurlyBracket",
+                        "range": {
+                          "start_pos": 89,
+                          "end_pos": 90
+                        },
+                        "children": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "node_type": "RightCurlyBracket",
+                "range": {
+                  "start_pos": 105,
+                  "end_pos": 106
+                },
+                "children": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
