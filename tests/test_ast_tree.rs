@@ -6,8 +6,6 @@ mod test_ast_tree {
     };
     use serde::{Deserialize, Serialize};
 
-    use super::*;
-
     #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
     enum SynataxNodeType {
         A = 1,
