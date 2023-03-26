@@ -570,6 +570,22 @@ mod tests {
         let mut builder = AstTreeBuilder::new();
         let mut parser = Parser::new(&mut lexer, &mut builder);
         parser.parse();
+        // dbg!(builder.ast_tree);
+    }
+    #[test]
+    fn simple22_test() {
+        let mut lexer = Lexer::new(
+            r#"
+           .bili-avatar {
+               .abc{
+                color:red
+               }
+              }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
         dbg!(builder.ast_tree);
     }
 }

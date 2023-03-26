@@ -31,24 +31,17 @@ impl<'a> Parser<'a> {
         Self { lexer, builder }
     }
     // ANCHOR: lexer_wrapper
-    pub fn peek(&mut self) -> Option<Token> {
-        let mut token = self.lexer.get_peek_token();
+    pub fn peek(&mut self) -> Option<&Token> {
         loop {
-            if let Some(node) = token {
-                if node.check_type(TokenType::Comment) {
-                    self.advance();
-                    token = self.lexer.get_peek_token();
-                    // token.unwrap().print_detail(self.lexer.source_code);
-                } else {
-                    break;
-                }
+            let token = self.lexer.get_peek_token();
+            if let Some(Token(TokenType::Comment, ..)) = token {
+                self.advance();
             } else {
                 break;
             }
         }
-        // token.unwrap().print_detail(self.lexer.source_code);
 
-        return token;
+        return self.lexer.get_peek_token();
     }
     pub fn advance(&mut self) {
         let node = self.lexer.eat_token();
@@ -64,7 +57,8 @@ impl<'a> Parser<'a> {
 
     pub fn check_token(&mut self, token_type: TokenType) {
         if !self.check_token_type(token_type) {
-            self.peek().unwrap().print_detail(&self.lexer.source_code);
+            let source = self.lexer.source_code;
+            self.peek().unwrap().print_detail(source);
             panic!(
                 "expect token type is {:?} but get token type {:?}",
                 token_type,
@@ -80,10 +74,6 @@ impl<'a> Parser<'a> {
         true
     }
 
-    pub fn token_eq_str(&self, token: &Token, str: &str) -> bool {
-        let ident_str = token.get_source_code(self.lexer.source_code);
-        ident_str.eq_ignore_ascii_case(str)
-    }
     //ANCHOR_END:lexer_wrapper
     // ANCHOR: entry
     pub fn parse(&mut self) {
@@ -237,16 +227,23 @@ impl<'a> Parser<'a> {
     pub fn parse_declaration_list(&mut self) {
         self.builder.start_node(TokenType::DeclarationList);
         self.check_token_and_advance(TokenType::LeftCurlyBracket);
-        self.parse_declaration();
-
-        // [ ';' S* declaration? ]*
-        loop {
-            if !self.check_token_type(TokenType::Semi) {
-                break;
-            }
-            self.check_token_and_advance(TokenType::Semi);
+        if self.check_token_type(TokenType::IdentToken)
+            && self.lexer.check_peek_peek_token_by_type(TokenType::Colon)
+        {
             self.parse_declaration();
+
+            // [ ';' S* declaration? ]*
+            loop {
+                if !self.check_token_type(TokenType::Semi) {
+                    break;
+                }
+                self.check_token_and_advance(TokenType::Semi);
+                self.parse_declaration();
+            }
+        } else {
+            self.parse_entry();
         }
+
         self.check_token_and_advance(TokenType::RightCurlyBracket);
         self.builder.finish_node();
     }
@@ -365,51 +362,60 @@ impl<'a> Parser<'a> {
     pub fn parse_simple_at_rule(&mut self) {
         self.parse_declaration_list();
     }
-    pub fn parse_at_rule(&mut self) {
+    pub fn token_eq_str(&mut self, str: &str) -> bool {
+        let source = self.lexer.source_code;
         if let Some(token) = self.peek() {
-            if self.token_eq_str(&token, IMPORT_SYM) {
-                self.parse_import_token();
-                return;
-            } else if self.token_eq_str(&token, CHARSET_SYM) {
-                self.parse_charset();
-                return;
-            } else if self.token_eq_str(&token, PAGE_SYM) {
-                self.parse_page();
-                return;
-            }
-
-            self.builder.start_node(TokenType::AtRule);
-            self.check_token_and_advance(TokenType::AtKeywordToken);
-            self.builder.start_node(TokenType::AtRuleParams);
-            loop {
-                if let Some(node) = self.peek() {
-                    match node.0 {
-                        TokenType::LeftCurlyBracket | TokenType::EOF => {
-                            break;
-                        }
-                        _ => {
-                            self.advance();
-                        }
-                    }
-                } else {
-                    break;
-                }
-            }
-            self.builder.finish_node();
-            if self.token_eq_str(&token, MEDIA_SYM)
-                || self.token_eq_str(&token, KEY_FRAMES)
-                || self.token_eq_str(&token, W_KEY_FRAMES)
-                || self.token_eq_str(&token, O_KEY_FRAMES)
-                || self.token_eq_str(&token, M_KEY_FRAMES)
-                || self.token_eq_str(&token, SUPPORTS)
-            {
-                self.parse_nest_at_rule();
-            } else {
-                self.parse_simple_at_rule();
-            }
-
-            self.builder.finish_node();
+            let ident_str = token.get_source_code(source);
+            return ident_str.eq_ignore_ascii_case(str);
         }
+        false
+    }
+
+    pub fn parse_at_rule(&mut self) {
+        if self.token_eq_str(IMPORT_SYM) {
+            self.parse_import_token();
+            return;
+        }
+        if self.token_eq_str(CHARSET_SYM) {
+            self.parse_charset();
+            return;
+        }
+        if self.token_eq_str(PAGE_SYM) {
+            self.parse_page();
+            return;
+        }
+        let is_nest_at_rule = self.token_eq_str(MEDIA_SYM)
+            || self.token_eq_str(KEY_FRAMES)
+            || self.token_eq_str(W_KEY_FRAMES)
+            || self.token_eq_str(O_KEY_FRAMES)
+            || self.token_eq_str(M_KEY_FRAMES)
+            || self.token_eq_str(SUPPORTS);
+
+        self.builder.start_node(TokenType::AtRule);
+        self.check_token_and_advance(TokenType::AtKeywordToken);
+        self.builder.start_node(TokenType::AtRuleParams);
+        loop {
+            if let Some(node) = self.peek() {
+                match node.0 {
+                    TokenType::LeftCurlyBracket | TokenType::EOF => {
+                        break;
+                    }
+                    _ => {
+                        self.advance();
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        self.builder.finish_node();
+        if is_nest_at_rule {
+            self.parse_nest_at_rule();
+        } else {
+            self.parse_simple_at_rule();
+        }
+
+        self.builder.finish_node();
     }
 
     pub fn parse_simple_select(&mut self) {

@@ -1,4 +1,5 @@
 use core::panic;
+use std::collections::VecDeque;
 
 use crate::token_type::TokenType::{self, HashToken};
 use crate::{range::Range, token::Token};
@@ -19,6 +20,8 @@ pub struct Lexer<'a> {
     pos_index: usize,
     /** 下一个Token */
     peek_token: Option<Token>,
+    peek_peek_token: Option<Token>,
+
     /** 当前字符 */
     cur_char: Option<char>,
     /** 字符切片 */
@@ -37,6 +40,7 @@ impl<'a> Lexer<'a> {
             pos_index: 0,
             cur_char: None,
             peek_token: None,
+            peek_peek_token: None,
             source_code,
         };
         lexer.advance();
@@ -65,13 +69,27 @@ impl<'a> Lexer<'a> {
     }
     // ANCHOR_END:  handle_char
 
-    pub fn get_peek_token(&mut self) -> Option<Token> {
+    pub fn get_peek_token(&mut self) -> Option<&Token> {
         if let None = self.peek_token {
-            self.peek_token = Some(self.get_token());
+            if let Some(peek_peek_token) = self.peek_peek_token {
+                self.peek_peek_token = None;
+                self.peek_token = Some(peek_peek_token);
+            } else {
+                self.peek_token = Some(self.get_token());
+            }
         } else {
-            return self.peek_token;
+            return self.peek_token.as_ref();
         }
-        return self.peek_token;
+        return self.peek_token.as_ref();
+    }
+
+    pub fn get_peek_peek_token(&mut self) -> Option<&Token> {
+        if let None = self.peek_peek_token {
+            self.peek_peek_token = Some(self.get_token());
+        } else {
+            return self.peek_peek_token.as_ref();
+        }
+        return self.peek_peek_token.as_ref();
     }
 
     pub fn eat_token(&mut self) -> Token {
@@ -79,12 +97,22 @@ impl<'a> Lexer<'a> {
             self.peek_token = None;
             return peek_token;
         }
+        if let Some(peek_peek_token) = self.peek_peek_token {
+            self.peek_peek_token = None;
+            return peek_peek_token;
+        }
         let token = self.get_token();
         return token;
     }
 
     pub fn check_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
         if let Some(token) = self.get_peek_token() {
+            return token.check_type(token_type);
+        }
+        false
+    }
+    pub fn check_peek_peek_token_by_type(&mut self, token_type: TokenType) -> bool {
+        if let Some(token) = self.get_peek_peek_token() {
             return token.check_type(token_type);
         }
         false
