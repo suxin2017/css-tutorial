@@ -1,0 +1,326 @@
+<!DOCTYPE HTML>
+<html lang="zh-en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>词法解析器开发 - rust 教程-css语法解析器</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+		
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="ingroduction.html"><strong aria-hidden="true">1.</strong> 概述</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> 准备环境</a></li><li class="chapter-item expanded "><a href="concept.html"><strong aria-hidden="true">3.</strong> 编译常识</a></li><li class="chapter-item expanded "><a href="range.html"><strong aria-hidden="true">4.</strong> 定位</a></li><li class="chapter-item expanded "><a href="lexer.html"><strong aria-hidden="true">5.</strong> 词法解析器</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="token.html"><strong aria-hidden="true">5.1.</strong> 词法 Token 定义</a></li><li class="chapter-item expanded "><a href="lexer-development.html" class="active"><strong aria-hidden="true">5.2.</strong> 词法解析器开发</a></li></ol></li><li class="chapter-item expanded "><a href="parser.html"><strong aria-hidden="true">6.</strong> 语法解析器</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="ast-tree.html"><strong aria-hidden="true">6.1.</strong> 语法树结构定义</a></li><li class="chapter-item expanded "><a href="parser-development.html"><strong aria-hidden="true">6.2.</strong> 词法解析器开发</a></li></ol></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">7.</strong> wasm 使用</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">rust 教程-css语法解析器</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="词法解析器开发"><a class="header" href="#词法解析器开发">词法解析器开发</a></h1>
+<p>我们已经实现了 Range，Token。</p>
+<p>这边我们直接进入正题，开始实现词法解析。</p>
+<p>首先介绍一下词法解析起的运作流程了</p>
+<pre><code>由语法分析进行调用
+获取token -&gt; 是否匹配 --&gt; 消费token
+               |
+               V
+            抛出异常
+</code></pre>
+<p>词法解析器的任务是找到一段文本中最小的文本结构，比如<code>123</code> <code>'abc'</code> 分别是数字和字符串。</p>
+<p>那么这些最小的文本结构，我们去哪找它的定义呢？</p>
+<p>下面两个连接我们可以得到我们想要的。</p>
+<p><a href="https://www.w3.org/TR/css-syntax-3/#consume-token">consume-token</a></p>
+<p><a href="https://www.w3.org/TR/CSS22/grammar.html">Appendix G. Grammar of CSS 2.2</a></p>
+<p>接下来开始我们的开发吧！</p>
+<h2 id="lexer-结构与辅助功能"><a class="header" href="#lexer-结构与辅助功能">Lexer 结构与辅助功能</a></h2>
+<p>我们创建<code>src/lexer.rs</code>文件。</p>
+<p>建立 lexer 的结构体</p>
+<pre><code class="language-rust no_run noplayground">{{#include ../src/lexer.rs:lexer}}
+</code></pre>
+<p>这里有一个 rust 的新手常见的坑，或者说迷惑的地方，就是 String str &amp;str 的关系，老实讲知道现在有时候我也很模糊。</p>
+<p>我的理解如下</p>
+<ul>
+<li>str 是静态字符串，编译器存储在二进制文件中。</li>
+<li>String 属于动态字符串，存储在堆中。</li>
+<li>&amp;str 是切片，或者说指针更好一些，他只是一个指向内存地址的指针</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">fn main() {
+</span>     let x = &quot;i am str&quot;;
+    // &quot;i am str&quot; 这是str 存储在二进制中
+    // x 是指向 str 的指针，所以他的类型是 &amp;str
+    let y = String::from(&quot;string&quot;);
+    // 转化 y 到 &amp;str
+    let z = &amp;y[..];
+    //  z &amp;str
+    // z 是指向y的指针
+<span class="boring">}
+</span></code></pre></pre>
+<p>这里的 chars 是 source_code 的切片，方便我们进行字符遍历。</p>
+<p>后面我们会使用这个迭代器进行迭代，受益于 rust 的零成本抽象，他的性能非常高。</p>
+<p>有了结构，接下来我们实现一些辅助函数，用来操作光标。</p>
+<p>我们在某些场景下不仅仅需要感知当前字符，还需要感知下一个字符。</p>
+<p>所以我们定义一下几个方法。</p>
+<pre><code class="language-rust no_run noplayground">{{#include ../src/lexer.rs:handle_char}}
+</code></pre>
+<p>这段代码中存在几个问题，我们使用了关键字 <code>pub</code> 作为方法前缀，但是这些方法只对内使用，所以这是一个错误的用法。</p>
+<p>第二，这部分我们应该使用缓存，存储上一次获得的结果，因为<code>clone</code>方法会影响性能。</p>
+<pre><code class="language-rust no_run noplayground"> // 思考：有没有什么更好的优化手段？
+self.chars.clone().nth(0).map(|x| x.1)
+</code></pre>
+<pre><code class="language-rust no_run noplayground">{{#include ../src/lexer.rs:get_token}}
+</code></pre>
+<p>最后我们通过<code>Lexer::new</code> 创建 lexer 实例</p>
+<pre><code class="language-rust no_run noplayground">{{#include ../src/lexer.rs:new}}
+</code></pre>
+<p>这里的<code>advence</code>相当开启了机器，词法解析器将不停的吞噬下一个字符，直到文本的最后。</p>
+<p>接下来我们实现 lexer 的主要方法，<code>Token</code> 创建器。</p>
+<p>为了限制篇幅，我只做 3 个介绍，剩下的大家可以看源码或者是课后作业，自行实现一遍，感受词法解析器的过程。</p>
+<ol>
+<li><strong>简单符号解析</strong></li>
+</ol>
+<pre><code class="language-rust no_run noplayground"> '(' | ')' | ',' | ':' | ';' | '&lt;' | '&gt;' | '[' | '\\' | ']' | '{' | '}' | '=' =&gt; {
+                    return self.parse_simple_symbol(ch)
+                }
+
+//parse_simple_symbol
+{{#include ../src/lexer.rs:parse_simple_symbol}}
+</code></pre>
+<p>首先我们通过 <code>match</code> 匹配当前字符串，这个语法就好像一个功能更加强大的<code>switch</code>语法,<code>_=&gt;{}</code> 就相当于<code>default</code>。</p>
+<p>最终返回，我们的元组结构体<code>Token</code>。</p>
+<p>是不是很简单，接下来我们把难度提升一点，来实现<code>Comment</code>的解析。</p>
+<ol start="2">
+<li>解析 Comment</li>
+</ol>
+<p>在 css 语法中只有一种注释，那就是<code>/* */</code>。</p>
+<pre><code class="language-rust no_run noplayground">'/' =&gt; return self.try_comment(),
+
+//try_comment
+{{#include ../src/lexer.rs:try_comment}}
+</code></pre>
+<p>首先当当前字符匹配到<code>/</code>时候我们调用方法<code>try_comment</code>。</p>
+<p>当下一个字符是<code>*</code>的时候，我们确认当前是一个注释，所以我们贪婪的获取下一个字符，指导遇见下一个<code>*/</code>。</p>
+<p>如果下一个字符不是<code>*</code>时候，我们返回斜杠类型，这个 token 类型会在分析函数的时候使用比如<code>calc(1px / 2px)</code>。</p>
+<p>实际上这里应该返回<code>Option</code>类型，但是如果全部都返回<code>Option</code>显得很繁琐，所以我这里就这报错了，<code>Option</code>提供两个枚举值，一个是<code>Some&lt;T&gt;</code>，一个是<code>None</code>，代表有值无值两种，从而比免了<code>null</code>的设计问题。</p>
+<p>好的，限制我们开始渐入佳境，有没有感觉到，在这个案例中，通过<code>if</code>进行不同状态的匹配呢？</p>
+<p>接下来，我们看一个更复杂的有限状态机数字类型。</p>
+<ol start="3">
+<li>数字类型解析</li>
+</ol>
+<p>几乎所有的编程语言都拥有数字类型，实际上要写一个计算器的语法解析器也是十分复杂的。</p>
+<p>我们来看下为什么数字类型这么复杂。</p>
+<p><img src="./image/number.png" alt="number" /></p>
+<p>这是我们要实现的铁轨图。</p>
+<p><code>digit</code> 在 css 中比较简单代表<code>0-9</code>字符。</p>
+<p>大家有兴趣可以看一下 lua 的<a href="https://regexper.com/#%2F%5E0%5BxX%5D%5B0-9a-fA-F%5D*%28%5C.%5B0-9a-fA-F%5D*%29%3F%28%5BpP%5D%5B%2B%5C-%5D%3F%5B0-9%5D%2B%29%3F%7C%5E%5B0-9%5D*%28%5C.%5B0-9%5D*%29%3F%28%5BeE%5D%5B%2B%5C-%5D%3F%5B0-9%5D%2B%29%3F%2F">数字类型的正则铁轨图</a>十分复杂。</p>
+<p>还记得我们在开头说的吗？词法解析器就是一个有限状态机的实现，所以虽然看起来很复杂，但是有了铁轨图的帮助，我们还是能顺利编写的。</p>
+<pre><code class="language-rust no_run noplayground">ch if ch.is_ascii_digit() || ch == '.' || ch == '+' || ch == '-' =&gt; {
+    return self.parse_digit_token()
+}
+
+//try_digit
+{{#include ../src/lexer.rs:try_digit}}
+</code></pre>
+<p>大家看最开始的匹配开始字符的语法，这是 match 守卫，可以在捕获变量后，添加一个 if 条件块进行进一步的确认。</p>
+<p>首先，我们通过前瞻确认他到底是不是一个数字，如果不是我们就返回他的原始符号类型。</p>
+<p>如果是我们便根据铁轨图的逻辑一步步吞噬 token，直到下一个 token 不在匹配。</p>
+<h2 id="测试我们的成果"><a class="header" href="#测试我们的成果">测试我们的成果</a></h2>
+<p>接下来开始测试我们写的成果。</p>
+<p>我们在测试目录<code>tests</code>下创建<code>test_lexer.rs</code>。</p>
+<p>创建 mod</p>
+<pre><code class="language-rust no_run noplayground">#[cfg(test)]
+mod test_lexer {
+}
+</code></pre>
+<p>为了方便测试我们使用宏来减少自己的模板代码。</p>
+<pre><code class="language-rust no_run noplayground">//test_lexer
+{{#include ../tests/test_lexer.rs:test_token}}
+</code></pre>
+<p>这段代码中，创建了<code>lexer</code>的实例，然后消费一个 token，最后检测消费的 token 是否是我们想要的类型。</p>
+<pre><code class="language-rust no_run noplayground">//test_simple_symbol
+{{#include ../tests/test_lexer.rs:lexer_test_example}}
+</code></pre>
+<p>好的，我们看我们的测试代码变得十分精简，这都是得益于 rust 的宏魔法。</p>
+<p>最后我们来运行测试一下<code>cargo test lexer</code>。</p>
+<pre><code class="language-sh">running 21 tests
+test test_lexer::test_all_match_token ... ok
+test test_lexer::test_at_token ... ok
+test test_lexer::test_complexe_url_token ... ok
+</code></pre>
+<p>大公告成，我们已经完成了我们的词法解析器啦，当然还有很多没有完成的词法，需要你自行探索有，代码最开始写的有问题也不要灰心哦，不断的实践才能让理论知识更加熟练，加油吧少年。</p>
+<p>在下一部分，我们将会实现我们的语法解析部分，会涉及 ast 语法树哦，敬请期待。</p>
+
+						<div id="giscus-container">
+							<script src="https://giscus.app/client.js"
+								data-repo="suxin2017/css-tutorial"
+								data-repo-id="R_kgDOIVQtVg"
+								data-category="General"
+								data-category-id="DIC_kwDOIVQtVs4CSQwY"
+								data-mapping="pathname"
+								data-strict="0"
+								data-reactions-enabled="1"
+								data-emit-metadata="0"
+								data-input-position="bottom"
+								data-theme="preferred_color_scheme"
+								data-lang="zh-CN"
+								crossorigin="anonymous"
+								async>
+							</script>
+						</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="token.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="parser.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="token.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="parser.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" charset="utf-8"></script>
+        <script src="mark.min.js" charset="utf-8"></script>
+        <script src="searcher.js" charset="utf-8"></script>
+        <script src="clipboard.min.js" charset="utf-8"></script>
+        <script src="highlight.js" charset="utf-8"></script>
+        <script src="book.js" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
