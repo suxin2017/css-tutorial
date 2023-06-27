@@ -8,7 +8,7 @@ mod test_lexer {
         ($x:expr,$y:expr) => {
             let mut lexer = Lexer::new($x);
             let token = lexer.eat_token();
-            dbg!(token.get_source_code(&$x));
+            dbg!(token.get_source_code());
             dbg!(&token);
             assert!(token.check_type($y));
         };
@@ -182,10 +182,22 @@ mod test_lexer {
         let mut lexer = Lexer::new(source);
         loop {
             let token = lexer.eat_token();
-            dbg!(token);
+            dbg!(&token);
             if token.check_type(TokenType::EOF) {
                 break;
             }
         }
+    }
+
+    #[test]
+    fn peek_simple1_lexer() {
+        let source = r#".abc:hover"#;
+        let mut lexer = Lexer::new(source);
+            let token = lexer.get_peek_token();
+       assert!(token.unwrap().check_type(TokenType::Dot));
+       assert!(lexer.get_peek_peek_token().unwrap().check_type(TokenType::IdentToken));
+       assert!(lexer.eat_token().check_type(TokenType::Dot));
+       assert!(lexer.get_peek_token().unwrap().check_type(TokenType::IdentToken));
+       assert!(lexer.get_peek_peek_token().unwrap().check_type(TokenType::Colon));
     }
 }

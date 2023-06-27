@@ -48,9 +48,6 @@ pub enum TokenType {
     /**} */
     RightCurlyBracket,
 
-    /** # */
-    NumberSign,
-
     /** / */
     ForwardSlash,
 
@@ -96,7 +93,7 @@ pub enum TokenType {
     // ANCHOR_END: lexer_token_type
 
     // ast node type
-    Stylesheet,
+    Stylesheets,
     Rule,
     Token,
     Selector,
@@ -110,6 +107,7 @@ pub enum TokenType {
     Page,
     Property,
     Declaration,
+    // !important
     Important,
     // '/' or ','
     Operator,
@@ -121,6 +119,15 @@ pub enum TokenType {
     SimpleSelect,
     Class,
     Attrib,
+    // @xx: 
+    Variable,
+    // @xxx:xxx;
+    VariableDeclaration,
+    //.s .c()
+    SelectorFunction,
+
+    //
+    SelectorList
 }
 
 impl Default for TokenType {
@@ -134,6 +141,7 @@ impl From<TokenType> for AstNode<TokenType> {
         Self {
             node_type: AstNodeType(token_type),
             range: Range::default(),
+            raw:String::default(),
             children: None,
         }
     }

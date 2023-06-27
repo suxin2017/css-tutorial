@@ -1,10 +1,11 @@
 {
   "root": {
-    "node_type": "Stylesheet",
+    "node_type": "Stylesheets",
     "range": {
       "start_pos": 12,
       "end_pos": 106
     },
+    "raw": ".bili-avatar{.abc{color:red}}",
     "children": [
       {
         "node_type": "RuleList",
@@ -12,43 +13,59 @@
           "start_pos": 12,
           "end_pos": 106
         },
+        "raw": ".bili-avatar{.abc{color:red}}",
         "children": [
           {
-            "node_type": "Selector",
+            "node_type": "SelectorList",
             "range": {
               "start_pos": 12,
               "end_pos": 24
             },
+            "raw": ".bili-avatar",
             "children": [
               {
-                "node_type": "SimpleSelect",
+                "node_type": "Selector",
                 "range": {
                   "start_pos": 12,
                   "end_pos": 24
                 },
+                "raw": ".bili-avatar",
                 "children": [
                   {
-                    "node_type": "Class",
+                    "node_type": "SimpleSelect",
                     "range": {
                       "start_pos": 12,
                       "end_pos": 24
                     },
+                    "raw": ".bili-avatar",
                     "children": [
                       {
-                        "node_type": "Dot",
+                        "node_type": "Class",
                         "range": {
                           "start_pos": 12,
-                          "end_pos": 13
-                        },
-                        "children": null
-                      },
-                      {
-                        "node_type": "IdentToken",
-                        "range": {
-                          "start_pos": 13,
                           "end_pos": 24
                         },
-                        "children": null
+                        "raw": ".bili-avatar",
+                        "children": [
+                          {
+                            "node_type": "Dot",
+                            "range": {
+                              "start_pos": 12,
+                              "end_pos": 13
+                            },
+                            "raw": ".",
+                            "children": null
+                          },
+                          {
+                            "node_type": "IdentToken",
+                            "range": {
+                              "start_pos": 13,
+                              "end_pos": 24
+                            },
+                            "raw": "bili-avatar",
+                            "children": null
+                          }
+                        ]
                       }
                     ]
                   }
@@ -62,6 +79,7 @@
               "start_pos": 25,
               "end_pos": 106
             },
+            "raw": "{.abc{color:red}}",
             "children": [
               {
                 "node_type": "LeftCurlyBracket",
@@ -69,6 +87,7 @@
                   "start_pos": 25,
                   "end_pos": 26
                 },
+                "raw": "{",
                 "children": null
               },
               {
@@ -77,43 +96,59 @@
                   "start_pos": 42,
                   "end_pos": 90
                 },
+                "raw": ".abc{color:red}",
                 "children": [
                   {
-                    "node_type": "Selector",
+                    "node_type": "SelectorList",
                     "range": {
                       "start_pos": 42,
                       "end_pos": 46
                     },
+                    "raw": ".abc",
                     "children": [
                       {
-                        "node_type": "SimpleSelect",
+                        "node_type": "Selector",
                         "range": {
                           "start_pos": 42,
                           "end_pos": 46
                         },
+                        "raw": ".abc",
                         "children": [
                           {
-                            "node_type": "Class",
+                            "node_type": "SimpleSelect",
                             "range": {
                               "start_pos": 42,
                               "end_pos": 46
                             },
+                            "raw": ".abc",
                             "children": [
                               {
-                                "node_type": "Dot",
+                                "node_type": "Class",
                                 "range": {
                                   "start_pos": 42,
-                                  "end_pos": 43
-                                },
-                                "children": null
-                              },
-                              {
-                                "node_type": "IdentToken",
-                                "range": {
-                                  "start_pos": 43,
                                   "end_pos": 46
                                 },
-                                "children": null
+                                "raw": ".abc",
+                                "children": [
+                                  {
+                                    "node_type": "Dot",
+                                    "range": {
+                                      "start_pos": 42,
+                                      "end_pos": 43
+                                    },
+                                    "raw": ".",
+                                    "children": null
+                                  },
+                                  {
+                                    "node_type": "IdentToken",
+                                    "range": {
+                                      "start_pos": 43,
+                                      "end_pos": 46
+                                    },
+                                    "raw": "abc",
+                                    "children": null
+                                  }
+                                ]
                               }
                             ]
                           }
@@ -127,6 +162,7 @@
                       "start_pos": 46,
                       "end_pos": 90
                     },
+                    "raw": "{color:red}",
                     "children": [
                       {
                         "node_type": "LeftCurlyBracket",
@@ -134,6 +170,7 @@
                           "start_pos": 46,
                           "end_pos": 47
                         },
+                        "raw": "{",
                         "children": null
                       },
                       {
@@ -142,6 +179,7 @@
                           "start_pos": 64,
                           "end_pos": 73
                         },
+                        "raw": "color:red",
                         "children": [
                           {
                             "node_type": "Property",
@@ -149,6 +187,7 @@
                               "start_pos": 64,
                               "end_pos": 69
                             },
+                            "raw": "color",
                             "children": [
                               {
                                 "node_type": "IdentToken",
@@ -156,6 +195,7 @@
                                   "start_pos": 64,
                                   "end_pos": 69
                                 },
+                                "raw": "color",
                                 "children": null
                               }
                             ]
@@ -166,6 +206,7 @@
                               "start_pos": 69,
                               "end_pos": 70
                             },
+                            "raw": ":",
                             "children": null
                           },
                           {
@@ -174,6 +215,7 @@
                               "start_pos": 70,
                               "end_pos": 73
                             },
+                            "raw": "red",
                             "children": [
                               {
                                 "node_type": "Term",
@@ -181,6 +223,7 @@
                                   "start_pos": 70,
                                   "end_pos": 73
                                 },
+                                "raw": "red",
                                 "children": [
                                   {
                                     "node_type": "IdentToken",
@@ -188,6 +231,7 @@
                                       "start_pos": 70,
                                       "end_pos": 73
                                     },
+                                    "raw": "red",
                                     "children": null
                                   }
                                 ]
@@ -202,6 +246,7 @@
                           "start_pos": 89,
                           "end_pos": 90
                         },
+                        "raw": "}",
                         "children": null
                       }
                     ]
@@ -214,6 +259,7 @@
                   "start_pos": 105,
                   "end_pos": 106
                 },
+                "raw": "}",
                 "children": null
               }
             ]

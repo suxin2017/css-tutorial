@@ -590,4 +590,67 @@ mod tests {
             "simple22_test",
         );
     }
+
+    #[test]
+    fn variable_test() {
+        let mut lexer = Lexer::new(
+            r#"
+           @ab-select: "../img";
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        println!("{}",serde_json::to_string_pretty(&builder.ast_tree).unwrap());
+       
+    }
+
+    #[test]
+    fn parent_selector() {
+        let mut lexer = Lexer::new(
+            r#"
+          a{
+            &:hover{}
+            &-ok {}
+            & + & {}
+            .a & {}
+          }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        println!("{}",serde_json::to_string_pretty(&builder.ast_tree).unwrap());
+       
+    }
+    #[test]
+    fn mixin_selector() {
+        let mut lexer = Lexer::new(
+            r#"
+          .b{
+            .a()
+          }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        println!("{}",serde_json::to_string_pretty(&builder.ast_tree).unwrap());
+       
+    }
+    #[test]
+    fn func_args() {
+        let mut lexer = Lexer::new(
+            r#"
+          .a(@a){
+           
+          }
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        println!("{}",serde_json::to_string_pretty(&builder.ast_tree).unwrap());
+       
+    }
 }

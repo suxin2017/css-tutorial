@@ -46,6 +46,10 @@ impl<'a> Lexer<'a> {
         lexer.advance();
         lexer
     }
+
+    pub fn get_sub_string_by_raw(&self, start: usize, end: usize) -> String {
+        self.source_code[start..end].to_string()
+    }
     //ANCHOR_END: new
     // ANCHOR:  handle_char
     // 查看前一个字符
@@ -71,9 +75,9 @@ impl<'a> Lexer<'a> {
 
     pub fn get_peek_token(&mut self) -> Option<&Token> {
         if let None = self.peek_token {
-            if let Some(peek_peek_token) = self.peek_peek_token {
+            if  self.peek_peek_token.is_some() {
                 self.peek_peek_token = None;
-                self.peek_token = Some(peek_peek_token);
+                self.peek_token = self.peek_peek_token.take();
             } else {
                 self.peek_token = Some(self.get_token());
             }
@@ -93,15 +97,15 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn eat_token(&mut self) -> Token {
-        if let Some(peek_token) = self.peek_token {
-            self.peek_token = None;
-            return peek_token;
+        let token;
+        if self.peek_token.is_some() {
+            token = self.peek_token.take().unwrap();
+            if self.peek_peek_token.is_some() {
+                self.peek_token = self.peek_peek_token.take();
+             }
+        }else{
+            token = self.get_token();
         }
-        if let Some(peek_peek_token) = self.peek_peek_token {
-            self.peek_peek_token = None;
-            return peek_peek_token;
-        }
-        let token = self.get_token();
         return token;
     }
 
@@ -145,7 +149,11 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        return Token(TokenType::EOF, Range::new(self.pos_index, self.pos_index));
+        return Token::new(
+            TokenType::EOF,
+            Range::new(self.pos_index, self.pos_index),
+            "".to_string(),
+        );
     }
     // ANCHOR_END: get_token
 
@@ -165,7 +173,11 @@ impl<'a> Lexer<'a> {
                             }
                             if escape_ch == '\'' {
                                 let end_pos = self.pos_index;
-                                return Token(TokenType::Str, Range::new(start_pos, end_pos));
+                                return Token::new(
+                                    TokenType::Str,
+                                    Range::new(start_pos, end_pos),
+                                    self.get_sub_string_by_raw(start_pos, end_pos),
+                                );
                             }
                         } else {
                             panic!("parse string token error");
@@ -182,7 +194,11 @@ impl<'a> Lexer<'a> {
                             }
                             if escape_ch == '"' {
                                 let end_pos = self.pos_index;
-                                return Token(TokenType::Str, Range::new(start_pos, end_pos));
+                                return Token::new(
+                                    TokenType::Str,
+                                    Range::new(start_pos, end_pos),
+                                    self.get_sub_string_by_raw(start_pos, end_pos),
+                                );
                             }
                         } else {
                             panic!("parse string token error");
@@ -212,7 +228,11 @@ impl<'a> Lexer<'a> {
                             self.advance();
 
                             let end_pos = self.pos_index;
-                            return Token(TokenType::Comment, Range::new(start_pos, end_pos));
+                            return Token::new(
+                                TokenType::Comment,
+                                Range::new(start_pos, end_pos),
+                                self.get_sub_string_by_raw(start_pos, end_pos),
+                            );
                         } else {
                             self.advance()
                         }
@@ -220,7 +240,11 @@ impl<'a> Lexer<'a> {
                 } else {
                     self.advance();
                     let end_pos = self.pos_index;
-                    return Token(TokenType::ForwardSlash, Range::new(start_pos, end_pos));
+                    return Token::new(
+                        TokenType::ForwardSlash,
+                        Range::new(start_pos, end_pos),
+                        self.get_sub_string_by_raw(start_pos, end_pos),
+                    );
                 }
             }
         }
@@ -260,20 +284,33 @@ impl<'a> Lexer<'a> {
                             if peek_ch.is_ascii_digit() {
                                 self.advance();
                             } else {
-                                return Token(
+                                return Token::new(
                                     TokenType::Plus,
                                     Range::new(start_pos, start_pos + 1),
+                                    self.get_sub_string_by_raw(start_pos, start_pos + 1),
                                 );
                             }
                         }
                     }
                     _ => {
                         return if ch == '+' {
-                            Token(TokenType::Plus, Range::new(start_pos, start_pos + 1))
+                            Token::new(
+                                TokenType::Plus,
+                                Range::new(start_pos, start_pos + 1),
+                                self.get_sub_string_by_raw(start_pos, start_pos + 1),
+                            )
                         } else if ch == '.' {
-                            Token(TokenType::Dot, Range::new(start_pos, start_pos + 1))
+                            Token::new(
+                                TokenType::Dot,
+                                Range::new(start_pos, start_pos + 1),
+                                self.get_sub_string_by_raw(start_pos, start_pos + 1),
+                            )
                         } else {
-                            Token(TokenType::Minus, Range::new(start_pos, start_pos + 1))
+                            Token::new(
+                                TokenType::Minus,
+                                Range::new(start_pos, start_pos + 1),
+                                self.get_sub_string_by_raw(start_pos, start_pos + 1),
+                            )
                         };
                     }
                 }
@@ -309,7 +346,11 @@ impl<'a> Lexer<'a> {
             }
 
             let end_pos = self.pos_index;
-            return Token(TokenType::Digital, Range::new(start_pos, end_pos));
+            return Token::new(
+                TokenType::Digital,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         }
         panic!("parse digit error {:?} {:?}", self.cur_char, self.pos_index);
     }
@@ -336,7 +377,11 @@ impl<'a> Lexer<'a> {
         if matches!(self.cur_char(), Some('(')) {
             self.advance();
             let end_pos = self.pos_index;
-            token = Token(TokenType::FunctionToken, Range::new(start_pos, end_pos));
+            token = Token::new(
+                TokenType::FunctionToken,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         };
         return token;
     }
@@ -347,7 +392,11 @@ impl<'a> Lexer<'a> {
         self.ident_token();
 
         let end_pos = self.pos_index;
-        return Token(TokenType::AtKeywordToken, Range::new(start_pos, end_pos));
+        return Token::new(
+            TokenType::AtKeywordToken,
+            Range::new(start_pos, end_pos),
+            self.get_sub_string_by_raw(start_pos, end_pos),
+        );
     }
 
     fn parse_hash(&mut self) -> Token {
@@ -355,7 +404,11 @@ impl<'a> Lexer<'a> {
         self.advance();
         self.match_word();
         let end_pos = self.pos_index;
-        return Token(HashToken, Range::new(start_pos, end_pos));
+        return Token::new(
+            HashToken,
+            Range::new(start_pos, end_pos),
+            self.get_sub_string_by_raw(start_pos, end_pos),
+        );
     }
 
     fn parse_digit_token(&mut self) -> Token {
@@ -366,13 +419,21 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 let end_pos = self.pos_index;
 
-                token = Token(TokenType::PercentageToken, Range::new(start_pos, end_pos))
+                token = Token::new(
+                    TokenType::PercentageToken,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                )
             } else if matches!(self.cur_char(),Some(ch) if !ch.is_whitespace() && !matches!(ch,';'|')'|'}'))
             {
                 if self.check_peek_token_by_type(TokenType::IdentToken) {
                     self.eat_token();
                     let end_pos = self.pos_index;
-                    return Token(TokenType::Dimension, Range::new(start_pos, end_pos));
+                    return Token::new(
+                        TokenType::Dimension,
+                        Range::new(start_pos, end_pos),
+                        self.get_sub_string_by_raw(start_pos, end_pos),
+                    );
                 }
             }
         }
@@ -384,7 +445,11 @@ impl<'a> Lexer<'a> {
                     {
                         let token = self.eat_token();
                         let end_pos = self.pos_index;
-                        return Token(token.0, Range::new(start_pos, end_pos));
+                        return Token::new(
+                            token.r#type,
+                            Range::new(start_pos, end_pos),
+                            self.get_sub_string_by_raw(start_pos, end_pos),
+                        );
                     }
                 }
             }
@@ -402,18 +467,42 @@ impl<'a> Lexer<'a> {
             let end_pos = self.pos_index;
 
             if ch == '^' {
-                return Token(TokenType::Exclude, Range::new(start_pos, end_pos));
+                return Token::new(
+                    TokenType::Exclude,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                );
             } else if ch == '*' {
-                return Token(TokenType::AllMatch, Range::new(start_pos, end_pos));
+                return Token::new(
+                    TokenType::AllMatch,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                );
             } else if ch == '~' {
-                return Token(TokenType::Includes, Range::new(start_pos, end_pos));
+                return Token::new(
+                    TokenType::Includes,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                );
             } else {
-                return Token(TokenType::Dashmatch, Range::new(start_pos, end_pos));
+                return Token::new(
+                    TokenType::Dashmatch,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                );
             }
         } else if ch == '*' {
-            return Token(TokenType::Asterisk, Range::new(start_pos, end_pos));
+            return Token::new(
+                TokenType::Asterisk,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         } else if ch == '~' {
-            return Token(TokenType::Wave, Range::new(start_pos, end_pos));
+            return Token::new(
+                TokenType::Wave,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         }
 
         panic!("parse attr rule error {}", self.pos_index);
@@ -432,7 +521,11 @@ impl<'a> Lexer<'a> {
         if self.check_peek_token_by_type(TokenType::IdentToken) {
             self.eat_token();
             let end_pos = self.pos_index;
-            return Token(TokenType::Important, Range::new(start_pos, end_pos));
+            return Token::new(
+                TokenType::Important,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         }
         panic!("get at ! important error")
     }
@@ -458,12 +551,16 @@ impl<'a> Lexer<'a> {
         };
         self.advance();
         let end_pos = self.pos_index;
-        return Token(token_type, Range::new(start_pos, end_pos));
+        return Token::new(
+            token_type,
+            Range::new(start_pos, end_pos),
+            self.get_sub_string_by_raw(start_pos, end_pos),
+        );
     }
     // ANCHOR_END: parse_simple_symbol
 
     fn parse_url_token(&mut self, token: &mut Token, start_pos: usize) -> Option<Token> {
-        if token.get_source_code(self.source_code) == "url" {
+        if token.get_source_code() == "url" {
             if matches!(self.cur_char(), Some('(')) {
                 self.advance();
             } else {
@@ -507,7 +604,11 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 let end_pos = self.pos_index;
 
-                *token = Token(TokenType::UrlToken, Range::new(start_pos, end_pos));
+                *token = Token::new(
+                    TokenType::UrlToken,
+                    Range::new(start_pos, end_pos),
+                    self.get_sub_string_by_raw(start_pos, end_pos),
+                );
             } else {
                 panic!("parse url token error")
             }
@@ -517,7 +618,7 @@ impl<'a> Lexer<'a> {
     //ANCHOR_END: get_token
 
     fn check_ch(&self, ch: char) -> bool {
-        return matches!(ch,'a'..='z'|'A'..='Z' | '0'..='9' |'_' |'-'| '\u{0080}'..);
+        return matches!(ch,'a'..='z'|'A'..='Z' |'&'| '0'..='9' |'_' |'-'| '\u{0080}'..);
     }
     fn match_word(&mut self) {
         while let Some((escape_ch, is_escape)) = self.escape() {
@@ -595,9 +696,17 @@ impl<'a> Lexer<'a> {
                 }
             }
             let end_pos = self.pos_index;
-            return Token(TokenType::IdentToken, Range::new(start_pos, end_pos));
+            return Token::new(
+                TokenType::IdentToken,
+                Range::new(start_pos, end_pos),
+                self.get_sub_string_by_raw(start_pos, end_pos),
+            );
         }
         let end_pos = self.pos_index;
-        return Token(TokenType::IdentToken, Range::new(start_pos, end_pos));
+        return Token::new(
+            TokenType::IdentToken,
+            Range::new(start_pos, end_pos),
+            self.get_sub_string_by_raw(start_pos, end_pos),
+        );
     }
 }

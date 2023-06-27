@@ -31,7 +31,7 @@ impl<'a> Parser<'a> {
     pub fn peek(&mut self) -> Option<&Token> {
         loop {
             let token = self.lexer.get_peek_token();
-            if let Some(Token(TokenType::Comment, ..)) = token {
+            if token.is_some_and(|t| t.check_type(TokenType::Comment)) {
                 self.advance();
             } else {
                 break;
@@ -55,11 +55,10 @@ impl<'a> Parser<'a> {
     pub fn check_token(&mut self, token_type: TokenType) {
         if !self.check_token_type(token_type) {
             let source = self.lexer.source_code;
-            self.peek().unwrap().print_detail(source);
             panic!(
                 "expect token type is {:?} but get token type {:?}",
                 token_type,
-                self.lexer.get_peek_token().unwrap().0
+                self.lexer.get_peek_token().unwrap()
             );
         }
     }
@@ -74,7 +73,7 @@ impl<'a> Parser<'a> {
     //ANCHOR_END:lexer_wrapper
     // ANCHOR: entry
     pub fn parse(&mut self) {
-        self.builder.start_node(TokenType::Stylesheet);
+        self.builder.start_node(TokenType::Stylesheets);
         self.parse_entry();
         self.builder.finish_node();
         self.builder.finish();
@@ -82,7 +81,7 @@ impl<'a> Parser<'a> {
 
     fn parse_entry(&mut self) {
         while let Some(token) = self.peek() {
-            let Token(token_type, _) = token;
+            let token_type = &token.r#type;
             match token_type {
                 TokenType::AtKeywordToken => {
                     self.parse_at_rule();
@@ -113,6 +112,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_selector_list(&mut self) {
+        self.builder.start_node(TokenType::SelectorList);
         self.parse_selector();
         loop {
             if self.check_token_type(TokenType::Comma) {
@@ -123,6 +123,7 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
+        self.builder.finish_node();
     }
 
     pub fn parse_selector(&mut self) {
@@ -131,6 +132,7 @@ impl<'a> Parser<'a> {
                 || self.check_token_type(TokenType::LeftCurlyBracket)
                 || self.check_token_type(TokenType::RightParenthesis)
                 || self.check_token_type(TokenType::Comma)
+                || self.check_token_type(TokenType::RightCurlyBracket)
             {
                 break;
             }
@@ -144,6 +146,7 @@ impl<'a> Parser<'a> {
             {
                 self.advance();
             }
+
             self.builder.finish_node();
         }
     }
@@ -222,27 +225,29 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_declaration_list(&mut self) {
-        self.builder.start_node(TokenType::DeclarationList);
-        self.check_token_and_advance(TokenType::LeftCurlyBracket);
-        if self.check_token_type(TokenType::IdentToken)
-            && self.lexer.check_peek_peek_token_by_type(TokenType::Colon)
-        {
-            self.parse_declaration();
-
-            // [ ';' S* declaration? ]*
-            loop {
-                if !self.check_token_type(TokenType::Semi) {
-                    break;
-                }
-                self.check_token_and_advance(TokenType::Semi);
+        if self.check_token_type(TokenType::LeftCurlyBracket) {
+            self.builder.start_node(TokenType::DeclarationList);
+            self.check_token_and_advance(TokenType::LeftCurlyBracket);
+            if self.check_token_type(TokenType::IdentToken)
+                && self.peek().is_some_and(|t| t.get_source_code() != '&'.to_string())
+            {
                 self.parse_declaration();
-            }
-        } else {
-            self.parse_entry();
-        }
 
-        self.check_token_and_advance(TokenType::RightCurlyBracket);
-        self.builder.finish_node();
+                // [ ';' S* declaration? ]*
+                loop {
+                    if !self.check_token_type(TokenType::Semi) {
+                        break;
+                    }
+                    self.check_token_and_advance(TokenType::Semi);
+                    self.parse_declaration();
+                }
+            } else {
+                self.parse_entry();
+            }
+
+            self.check_token_and_advance(TokenType::RightCurlyBracket);
+            self.builder.finish_node();
+        }
     }
 
     pub fn parse_declaration(&mut self) {
@@ -293,7 +298,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_term(&mut self) -> bool {
         if let Some(token) = self.peek() {
-            match token.0 {
+            match token.r#type {
                 TokenType::Digital
                 | TokenType::Dimension
                 | TokenType::Str
@@ -312,6 +317,9 @@ impl<'a> Parser<'a> {
                     self.builder.finish_node();
                     return true;
                 }
+                TokenType::AtKeywordToken => {
+                    self.parse_variable_declaration(false);
+                }
                 TokenType::FunctionToken => {
                     self.builder.start_node(TokenType::Term);
                     self.parse_function();
@@ -322,7 +330,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     loop {
                         if let Some(token) = self.peek() {
-                            match token.0 {
+                            match token.r#type {
                                 TokenType::RightParenthesis => {
                                     self.advance();
                                     break;
@@ -362,7 +370,7 @@ impl<'a> Parser<'a> {
     pub fn token_eq_str(&mut self, str: &str) -> bool {
         let source = self.lexer.source_code;
         if let Some(token) = self.peek() {
-            let ident_str = token.get_source_code(source);
+            let ident_str = token.get_source_code();
             return ident_str.eq_ignore_ascii_case(str);
         }
         false
@@ -388,12 +396,19 @@ impl<'a> Parser<'a> {
             || self.token_eq_str(M_KEY_FRAMES)
             || self.token_eq_str(SUPPORTS);
 
+        let is_variable =
+            !is_nest_at_rule && self.lexer.check_peek_peek_token_by_type(TokenType::Colon);
+        if is_variable {
+            self.parse_variable_declaration(true);
+            return;
+        }
+
         self.builder.start_node(TokenType::AtRule);
         self.check_token_and_advance(TokenType::AtKeywordToken);
         self.builder.start_node(TokenType::AtRuleParams);
         loop {
             if let Some(node) = self.peek() {
-                match node.0 {
+                match node.r#type {
                     TokenType::LeftCurlyBracket | TokenType::EOF => {
                         break;
                     }
@@ -415,6 +430,21 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn parse_variable_declaration(&mut self, force: bool) {
+        self.builder.start_node(TokenType::VariableDeclaration);
+        self.builder.start_node(TokenType::Variable);
+        self.check_token_and_advance(TokenType::AtKeywordToken);
+        self.builder.finish_node();
+        if self.check_token_type(TokenType::Colon) || force {
+            self.check_token_and_advance(TokenType::Colon);
+            self.parse_expr();
+        }
+        if self.check_token_type(TokenType::Semi) || force {
+            self.check_token_and_advance(TokenType::Semi);
+        }
+        self.builder.finish_node();
+    }
+
     pub fn parse_simple_select(&mut self) {
         self.builder.start_node(TokenType::SimpleSelect);
         self.parse_element_name();
@@ -422,6 +452,12 @@ impl<'a> Parser<'a> {
         self.parse_class();
         self.parse_attrib();
         self.parse_pseudo();
+        // dbg!(self.peek());
+        // // selector function;
+        if self.check_token_type(TokenType::Dot) {
+            self.advance();
+            self.parse_function();
+        }
 
         self.builder.finish_node();
     }
@@ -452,7 +488,11 @@ impl<'a> Parser<'a> {
 
     pub fn parse_class(&mut self) {
         loop {
-            if self.check_token_type(TokenType::Dot) {
+            if self.check_token_type(TokenType::Dot)
+                && self
+                    .lexer
+                    .check_peek_peek_token_by_type(TokenType::IdentToken)
+            {
                 self.builder.start_node(TokenType::Class);
                 self.advance();
                 self.check_token_and_advance(TokenType::IdentToken);
@@ -472,7 +512,7 @@ impl<'a> Parser<'a> {
                 self.check_token_and_advance(TokenType::IdentToken);
 
                 if let Some(node) = self.peek() {
-                    match node.0 {
+                    match node.r#type {
                         TokenType::Equal
                         | TokenType::Includes
                         | TokenType::Dashmatch
@@ -485,7 +525,7 @@ impl<'a> Parser<'a> {
                 }
 
                 if let Some(node) = self.peek() {
-                    match node.0 {
+                    match node.r#type {
                         TokenType::IdentToken | TokenType::Str => {
                             self.advance();
                         }

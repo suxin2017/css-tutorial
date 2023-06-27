@@ -1,0 +1,139 @@
+#  lexer token
+semi = ';';
+dot = '.';
+comma = ',';
+colon = ':';
+left_parenthesis = '(';
+right_parenthesis = ')';
+plus = '+';
+minus = '-';
+less_than = '<';
+at ='@';
+left_square_bracket = '[';
+right_square_bracket = ']';
+reverse_solidus = "\\";
+left_curly_bracket = "{";
+right_curly_bracket = "}";
+forswrd_slash = "/";
+equal = "=";
+asterisk = "*";
+wave = "~";
+dashmatch = "|=";
+includes = "~=";
+exclude = "^=";
+all_match = "*=";
+CDOToken = "<!--";
+CDCTOken = "-->";
+more_than = ">";
+white_space = ? white space characters ? ;
+all_characters = ? all visible characters?;
+digital = "0" | "1" | "2" | "3" |"4" |"5" | "6" | "7" | "8" | "9";
+
+
+# combaintion token
+str = single_str | double_str;
+single_str = "'" , {all_characters - "'"} ,"'";
+double_str = '"', {all_characters - '"'},'"';
+
+operator = plus | minus | asterisk | forswrd_slash;
+
+number = [ "-" | "+" | "."], digit ,[ {digit} ], ["e" | "E"];
+
+ident = all_characters, [{all_characters | digit}];
+
+percentage = digital, "%";
+# 14px 32rem ..
+dimension = digital, ident;
+
+comment = "/*", all_characters , "*/";
+
+function_token = ident , "(";
+
+at_keyword = at,ident;
+hash_token = "#" , ident;
+
+#  有点和function token 是一样的
+url_token = "url(", all_characters, ")";
+
+# grammer 
+style_sheets = rule_list | 
+rule = selector_list , declaration_list;
+# @media() {};
+# @import();
+# @keyframes slidein {}
+at_rule = at,ident, all_characters
+simple_at_rule = at_charset,
+at_charset = at,'charset' ,str;
+at_namespace = at,'namespace',ident,[url_token];
+at_media = at,ident, "(", 
+at_import = at,str , [url | str] , [layer | layer(ident)] , import_conditions;
+import_conditions = ["supports(", [support_condition | declaration] , ")"];
+
+# @abc str
+at_select_two = at,ident, ,";";
+# @a
+at_select_one = at ,ident ,[str | declaration_list | ({ident} ,declaration_list)] ;
+container_condition = 
+
+declaration_list = "{",[{declaration}],"}";
+declaration = property , ":" , expression, {'important'};
+property = [asterisk] , ident;
+
+selector_list = simple_selector,[{white_space|",",simple_selector}]
+simple_selector = class_selector | id_selector | asterisk_selector | element_selector
+                    pseudo_selector | target_selector;
+
+class_selector = dot,ident;
+id_selector = hash_token;
+asterisk_selector = asterisk;
+element_selector = ident;
+children_selector = simple_selector ,">", simple_selector;
+borther_selector = simple_selector, "+", simple_selector;
+every_selector = simple_selector, "~", simple_selector;
+target_selector = "[",ident,["="|"~="|"|="|"^="|"$="|"*=",ident] "]";
+pseudo_selector = ":", [":"],ident | call_expr;
+
+
+
+term = digit | dimension | str | ident | url_token | dot | colon 
+        | hash_token | plus | minus | asterisk | forswrd_slash | percentage 
+        | ("(",term,")") | variable_declaration | call_expr;
+
+# @a: 123 + 12px;
+# @a: {};
+variable_declaration = at_keyword,expression | 
+# a() 
+call_expr = function_token,expression,")";
+
+# 1 + 2  
+# 1 + a()
+expression = term, { comma | forswrd_slash | equal, term };
+
+# media query start
+not = "not";
+only = "only";
+media_query = media_condition | ([not | only], media_type [and, media_condition_without_or]);
+media_type = ident;
+media_condition = media_not | madia_in_parens [{media_and} | {media_or}]
+media_condition_without_or = media_not | media_in_parens , {media_and};
+media_not = not, media_in_parens;
+media_and = and, media_in_parens;
+media_or = or,media_in_parens;
+media_in_parens = media_condition | media_feature | general_enclose;
+media_feature = [mf_plain | mf_boolean | mf_range];
+mf_plain = mf_name : mf_value;
+mf_boolean = mf_name;
+mf_range = (mf_name,mf_comparision,mf_value)|
+            (mf_value,mf_comparision,mf_name)|
+            (mf_value,mf_lt,mf_name,mf_lt,mf_value)|
+            (mf_value,mf_gt,mf_name,mf_gt,mf_value);
+mf_name = ident;
+mf_value = number | dimension, ident | ratio;
+mf_lt = "<",["="];
+mf_gt = ">",["="];
+mf_eq = "=";
+mf_comparision = mf_lf | mf_gt |mf_eq;
+            
+
+
+# media query end

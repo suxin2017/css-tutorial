@@ -5,13 +5,16 @@ mod test_token {
 
     #[test]
     fn check_token_type() {
-        assert!(Token(TokenType::EOF, Range::default()).check_type(TokenType::EOF))
+        assert!(
+            Token::new(TokenType::EOF, Range::default(), Default::default())
+                .check_type(TokenType::EOF)
+        )
     }
 
     #[test]
     fn get_source_code() {
         assert_eq!(
-            Token(TokenType::EOF, Range::new(0, 2)).get_source_code("raw"),
+            Token::new(TokenType::EOF, Range::new(0, 2), "ra".to_string()).get_source_code(),
             "ra"
         )
     }

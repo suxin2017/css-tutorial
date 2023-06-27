@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test_ast_tree {
     use css_tutorial::{
-        ast::{AstNode, AstNodeType, AstTreeBuilder},
-        range::Range,
+        ast::{AstNode, AstNodeType, AstTreeBuilder, Visitor},
+        range::Range, lexer::Lexer, parser::Parser, token_type::TokenType,
     };
     use serde::{Deserialize, Serialize};
 
@@ -32,6 +32,7 @@ mod test_ast_tree {
                     start_pos: token as usize,
                     end_pos: token as usize * 2,
                 },
+                raw: String::default(),
                 node_type: token.into(),
                 children: None,
             }
@@ -64,8 +65,30 @@ mod test_ast_tree {
         ast_tree_builder.finish_node();
         ast_tree_builder.finish_node();
         ast_tree_builder.finish();
-        ast_tree_builder
-            .ast_tree
-            .travel(&|node| println!("{:?}\n", node))
+        ast_tree_builder.ast_tree.travel(&|node| {
+            println!("{:?}\n", node);
+        })
+    }
+    #[test]
+    fn test_visitor() {
+        struct FirstVisitor;
+        impl Visitor for FirstVisitor {
+            fn term(&self, node: &mut AstNode<TokenType>) {
+                node.raw = "456".to_string();
+                dbg!(&node);
+            }
+            fn stylesheets(&self,node: &mut AstNode<TokenType>) {
+                dbg!(&node);
+            }
+        }
+        let mut lexer = Lexer::new(
+            r#"
+         body{a:red};
+            "#,
+        );
+        let mut builder = AstTreeBuilder::new();
+        let mut parser = Parser::new(&mut lexer, &mut builder);
+        parser.parse();
+        // FirstVisitor{}.stylesheets(&mut *builder.ast_tree.root.unwrap())
     }
 }
